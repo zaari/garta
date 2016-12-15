@@ -23,5 +23,3 @@ cairo-rs = "*"
 [features]
 default = ["gtk/v3_14"]
 
-# TODO: http://stackoverflow.com/questions/26946646/rust-package-with-both-a-library-and-a-binary
-
