@@ -1,0 +1,27 @@
+[package]
+name = "garta"
+version = "0.0.1"
+authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
+
+[dependencies]
+regex = "*"
+time = "*"
+image = "*"
+num_cpus = "^1"
+xml-rs = "*"
+serde = "*"
+serde_json = "*"
+lazy_static = "*"
+
+glib = "*"
+gdk = "*"
+gdk-pixbuf = "*"
+gtk = "*"
+gio = "*"
+cairo-rs = "*"
+
+[features]
+default = ["gtk/v3_14"]
+
+# TODO: http://stackoverflow.com/questions/26946646/rust-package-with-both-a-library-and-a-binary
+

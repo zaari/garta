@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.14"/>
+  <object class="GtkApplicationWindow" id="main_window">
+    <property name="can_focus">False</property>
+    <property name="has_focus">False</property>
+    <property name="is_focus">False</property>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="headerbar">
+        <property name="visible">True</property>
+        <property name="show_close_button">True</property>
+        <property name="title" translatable="yes">Garta</property>
+        <child>
+          <object class="GtkMenuButton" id="add_button">
+              <property name="visible">True</property>
+              <property name="valign">center</property>
+              <property name="menu-model">add-button-menu-model</property>
+              <property name="image">add_image</property>                  
+              <style>
+                <class name="image-button"/>
+              </style>
+
+          </object>
+          <packing>
+            <property name="pack_type">start</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkMenuButton" id="list_button">
+              <property name="visible">True</property>
+              <property name="valign">center</property>
+              <property name="menu-model">list-button-menu-model</property>
+              <property name="image">list_image</property>
+              <style>
+                <class name="image-button"/>
+              </style>
+          </object>
+          <packing>
+            <property name="pack_type">start</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkMenuButton" id="menu_button">
+              <property name="visible">True</property>
+              <property name="valign">center</property>
+              <property name="menu-model">menu-button-menu-model</property>
+              <property name="image">menu_image</property>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+  
+        <child>
+          <object class="GtkButton">
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkBox" id="bottom_bar">
+            <property name="visible">True</property>
+            <property name="orientation">horizontal</property>
+            
+            <child>
+              <object class="GtkMenuButton" id="maps_button">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">False</property>
+                <property name="is_focus">False</property>
+                <property name="receives_default">True</property>
+                <property name="relief">none</property>
+                <property name="direction">up</property>
+                <child>
+                  <object class="GtkBox" id="maps_button_box">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="has_focus">False</property>
+                    <property name="is_focus">False</property>
+                    <property name="spacing">3</property>
+                    <child>
+                      <object class="GtkLabel" id="maps_button_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="has_focus">False</property>
+                        <property name="is_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="valign">baseline</property>
+                        <property name="label">Maps</property>
+                        <property name="single_line_mode">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="maps_button_arrow">
+                        <property name="visible">True</property>
+                        <property name="valign">baseline</property>
+                        <property name="icon_name">pan-up-symbolic</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">start</property>
+              </packing>
+            </child>
+            
+            <child>
+              <object class="GtkMenuButton" id="layers_button">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">False</property>
+                <property name="is_focus">False</property>
+                <property name="receives_default">True</property>
+                <property name="relief">none</property>
+                <property name="direction">up</property>
+                <child>
+                  <object class="GtkBox" id="layers_button_box">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="has_focus">False</property>
+                    <property name="is_focus">False</property>
+                    <property name="spacing">3</property>
+                    <child>
+                      <object class="GtkLabel" id="layers_button_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="has_focus">False</property>
+                        <property name="is_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="valign">baseline</property>
+                        <property name="label">Layers</property>
+                        <property name="single_line_mode">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="layers_button_arrow">
+                        <property name="visible">True</property>
+                        <property name="valign">baseline</property>
+                        <property name="icon_name">pan-up-symbolic</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">start</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkLabel" id="zoom_level_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="has_focus">False</property>
+                <property name="is_focus">False</property>
+                <property name="halign">start</property>
+                <property name="valign">baseline</property>
+                <property name="single_line_mode">True</property>
+                <property name="label">--</property>
+                <property name="margin_end">10</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">end</property>
+              </packing>
+            </child>
+              
+            <child>
+              <object class="GtkMenuButton" id="coordinates_button">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">False</property>
+                <property name="is_focus">False</property>
+                <property name="receives_default">True</property>
+                <property name="relief">none</property>
+                <property name="direction">up</property>
+                <child>
+                  <object class="GtkBox" id="coordinates_button_box">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="has_focus">False</property>
+                    <property name="is_focus">False</property>
+                    <property name="spacing">3</property>
+                    <child>
+                      <object class="GtkLabel" id="coordinates_button_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="has_focus">False</property>
+                        <property name="is_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="valign">baseline</property>
+                        <property name="label">Coordinates</property>
+                        <property name="single_line_mode">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="coordinates_button_arrow">
+                        <property name="visible">True</property>
+                        <property name="valign">baseline</property>
+                        <property name="icon_name">pan-up-symbolic</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">end</property>
+              </packing>
+            </child>
+            
+          </object>              
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+          </packing>
+        </child>
+
+      </object>
+
+    </child>
+
+  </object>
+
+  <object class="GtkImage" id="add_image">
+    <property name="visible">True</property>
+    <property name="icon_name">list-add-symbolic</property>
+  </object>
+  
+  <object class="GtkImage" id="list_image">
+    <property name="visible">True</property>
+    <property name="icon_name">view-paged-symbolic</property>
+  </object>
+  
+  <object class="GtkImage" id="menu_image">
+    <property name="visible">True</property>
+    <property name="icon_name">emblem-system-symbolic</property>
+  </object>
+
+  <menu id='add-button-menu-model'>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Attraction</attribute>
+        <attribute name='action'>win.add_attraction</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Waypoint</attribute>
+        <attribute name='action'>win.add_waypoint</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Track...</attribute>
+        <attribute name='action'>win.add_track</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Route</attribute>
+        <attribute name='action'>win.add_route</attribute>
+      </item>
+    </section>
+  </menu>
+  
+  <menu id='list-button-menu-model'>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Attractions...</attribute>
+        <attribute name='action'>win.manage_attractions</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Waypoints...</attribute>
+        <attribute name='action'>win.manage_waypoints</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Tracks...</attribute>
+        <attribute name='action'>win.manage_tracks</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Routes...</attribute>
+        <attribute name='action'>win.manage_routes</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Vehicles...</attribute>
+        <attribute name='action'>win.manage_vehicles</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Maps...</attribute>
+        <attribute name='action'>win.manage_maps</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Layers...</attribute>
+        <attribute name='action'>win.manage_layers</attribute>
+      </item>
+    </section>
+  </menu>
+  
+  <menu id='menu-button-menu-model'>
+    <section>
+      <item>
+        <attribute name='label' translatable='yes'>Find...</attribute>
+        <attribute name='action'>win.find</attribute>
+      </item>
+      <item>
+        <attribute name='label' translatable='yes'>Settings...</attribute>
+        <attribute name='action'>win.settings</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <object class="GtkApplication" id="app">
+  </object>
+  
+</interface>
+
