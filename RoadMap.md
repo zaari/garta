@@ -6,6 +6,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 - map implemented with scrolling and zooming support
 - slippy maps can be defined in json files
 - domain model persistence
+- settings persistence
 
 ## Version 0.2
 - GPX loading
@@ -31,6 +32,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 
 ## Version 0.7
 - internationalization (contributions needed)
+- fixed cargo dependencies
 
 ## Version 1.0
 - stable file formats and directory structure

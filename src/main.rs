@@ -1,3 +1,19 @@
+// Garta - GPX editor and analyser
+// Copyright (C) 2016  Timo Saarinen
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -7,10 +23,10 @@ mod gpx;
 
 use std::cell::{RefCell};
 use std::rc::{Rc};
-use std::result::*;
 use std::sync::{Arc};
+use std::process::{exit};
 
-use core::settings::{settings_read, settings_write};
+use core::settings::{settings_write};
 use core::tiles::TileRequestQueue;
 use core::root::{Project, Layer, MapView};
 use core::map::Map;
@@ -20,7 +36,10 @@ fn main() {
     
     // Load settings
     println!("Loading settings");
-    settings_write().load();
+    if let Err(e) = settings_write().load() {
+        println!("Failed to load settings: {}", e);
+        exit(1);
+    }
     
     // Start the threads
     println!("Starting worker threads");
@@ -40,7 +59,7 @@ fn main() {
     let mut main_window = gui::MapWindow::new(Box::new(project), map_view);
     match main_window.run() {
         Ok(()) => { },
-        Err(e) => { println!("{}", e); },
+        Err(e) => { println!("Failed to open the main window: {}", e); },
     }
 }
 

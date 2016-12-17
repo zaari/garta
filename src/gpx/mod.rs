@@ -1,3 +1,18 @@
+// Garta - GPX editor and analyser
+// Copyright (C) 2016  Timo Saarinen
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate time;
 
@@ -5,23 +20,20 @@ pub mod model;
 pub mod reader;
 pub mod writer;
 
-use self::model::*;
 use self::reader::*;
-use self::writer::*;
+//use self::writer::*;
 
-use std::result::Result;
 use std::fs::File;
 use std::path::Path;
-use std::io::{BufReader, Read};
-use self::time::{strftime};
+use std::io::{BufReader};
 
 #[test]
 fn test_gpx_reader() {
-    let filename = "/var/tmp/2016-08-20_Kaunissaari_ORIG.gpx";
+    let filename = "testdata/kaunisssari.gpx";
     let file = File::open(&Path::new(filename)).unwrap();
     let reader = BufReader::new(file);
 
-    let mut collection = read_gpx(reader);
+    let collection = read_gpx(reader);
     match collection {
         Ok(col) => {
             println!("ok");
@@ -29,7 +41,7 @@ fn test_gpx_reader() {
                 println!("track");
                 for seg in track.trkseg {
                     println!("seg");
-                    for mut pt in seg.trkpt {
+                    for pt in seg.trkpt {
                         println!("{}", pt);
                     }
                 }

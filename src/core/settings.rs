@@ -1,7 +1,21 @@
+// Garta - GPX editor and analyser
+// Copyright (C) 2016  Timo Saarinen
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 extern crate num_cpus;
 
-use std::cell::{RefCell};
-use std::rc::{Rc};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 /*use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};*/
 use std::collections::linked_list::{LinkedList};
@@ -9,7 +23,7 @@ use core::map::{Map};
 
 /// A singleton-like construct for settings_read and settings_write methods.
 lazy_static! {
-    static ref settings: RwLock<Settings> = RwLock::new(Settings::new());
+    static ref SETTINGS: RwLock<Settings> = RwLock::new(Settings::new());
 }
 
 pub struct Settings {
@@ -53,26 +67,25 @@ impl Settings {
         }
     }
     
-    /// Load settings from a file
-    pub fn load(&mut self) {
+    /// Load settings from a file. Returns Ok if either the loading succeeded or 
+    /// if the settings file wasn't found.
+    pub fn load(&mut self) -> Result<(), &'static str> {
+        Ok(()) // TODO
     }
     
-    /// Save settings to a file
-    pub fn save(&self) {
+    /// Save settings to a file. Returns Err if saving the file failed.
+    pub fn save(&self) -> Result<(), &'static str> {
+        Ok(()) // TODO
     }
 }
 
 /// Unlock settings for read access.
 pub fn settings_read<'a>() -> RwLockReadGuard<'a, Settings> {
-    unsafe {
-        settings.read().unwrap()
-    }
+    SETTINGS.read().unwrap()
 }
 
 /// Unlock settings for write access.
 pub fn settings_write<'a>() -> RwLockWriteGuard<'a, Settings> {
-    unsafe {
-        settings.write().unwrap()
-    }
+    SETTINGS.write().unwrap()
 }
 

@@ -1,11 +1,11 @@
 # Garta
 Garta is a GPX editor for GNOME 3 desktop environment.
 
-* [change log](ChangeLog.md)
-* [Road map](RoadMap.md)
+* [Change Log](ChangeLog.md)
+* [Road Map](RoadMap.md)
 
 ## Getting started
-The following tools are needed to download and compile Garta:
+The following tools are needed to download and compile the application:
 
 * git 
 * cargo
@@ -21,12 +21,12 @@ cd garta
 The standard cargo commands can be used to run the unit tests, run the application or even build a release.
 
 ```bash
-export RUSTFLAGS="$RUSTFLAGS -A dead_code"
+export RUSTFLAGS="$RUSTFLAGS -A dead_code -A unused_variables"
 cargo test
 cargo run
 cargo build --release
 ```
 
 ## License
-Garta is distributed under the terms of the [Apache License (Version 2.0)](https://www.apache.org/licenses/LICENSE-2.0).
+Garta is distributed under the terms of the [GNU General Public License (Version 3)](https://www.gnu.org/licenses/gpl-3.0.en.html).
 

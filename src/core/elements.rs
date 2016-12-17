@@ -1,3 +1,18 @@
+// Garta - GPX editor and analyser
+// Copyright (C) 2016  Timo Saarinen
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 extern crate time;
 extern crate xml;
@@ -7,9 +22,6 @@ use std::rc::{Rc};
 use std::option::{Option};
 
 use std::cmp::*;
-
-use self::time::Tm;
-use self::xml::reader::{EventReader, XmlEvent};
 
 use core::geo::*;
 use core::root::*;
@@ -80,10 +92,14 @@ impl MapElement for Area {
 
 // -------------------------------------------------------------------------------------------------
 
-pub fn load_from_file(filename: String, layer: &mut Layer) {
+/// Load GPX data from file to a given layer
+pub fn load_from_file(gpx_filename: String, layer: &Rc<RefCell<Layer>>) {
+    // TODO
 }
 
-pub fn save_layer(filename: String, layer: &mut Layer) {
+// Save the given layer to a GPX file
+pub fn save_layer(gpx_filename: String, layer: &Rc<RefCell<Layer>>) {
+    // TODO
 }
 
 // ---- PathPoint ----------------------------------------------------------------------------------

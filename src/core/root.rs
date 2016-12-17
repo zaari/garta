@@ -1,3 +1,18 @@
+// Garta - GPX editor and analyser
+// Copyright (C) 2016  Timo Saarinen
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::cell::{RefCell};
 use std::rc::{Rc};
@@ -6,9 +21,6 @@ use std::collections::linked_list::LinkedList;
 use std::collections::BTreeSet;
 
 use core::elements::*;
-use core::map::*;
-
-use std::cmp::Ord;
 
 pub struct MapView {
     pub zoom_level: u8,
@@ -76,20 +88,9 @@ impl Project {
         // TODO
         false
     }
-
-    /// Get name of the project.
-    pub fn name(&self) -> &String {
-        &self.name
-    }
-    
-    /// Set name of the project.
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
 }
 
 // ---- ProjectLoadSaveStatus ----------------------------------------------------------------------
-
 pub struct ProjectLoadSaveStatus {
     pub total: i64,
     pub loaded: i64,

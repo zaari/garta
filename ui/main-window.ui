@@ -152,7 +152,7 @@
                         <property name="is_focus">False</property>
                         <property name="halign">start</property>
                         <property name="valign">baseline</property>
-                        <property name="label">Layers</property>
+                        <property name="label">Layers 5/5</property>
                         <property name="single_line_mode">True</property>
                       </object>
                       <packing>
