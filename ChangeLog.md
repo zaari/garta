@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - implemented a proper closure for layers button action
 - `dead_code` and `unused_variables` warnings are disabled in the main crate now
+
 ### Changed
 - even more code clean-up
 
