@@ -17,7 +17,6 @@
 extern crate num_cpus;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-/*use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};*/
 use std::collections::linked_list::{LinkedList};
 use core::map::{Map};
 

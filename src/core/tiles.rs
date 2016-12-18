@@ -21,7 +21,8 @@
 // TIFF file format is used because of its fast loading time. It would be ideal to be able to move 
 // Pixbufs between Rust threads but that seem not to be possible at moment.
 //
-// It's expected that this file gets rewritten at least once in the future.
+// Currently this file is more like a proof of concept than a serious implementation. 
+// At least one complete rewrite is expected in the future.
 
 extern crate cairo;
 extern crate gdk;

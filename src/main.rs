@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -47,16 +50,16 @@ fn main() {
     trq.read().unwrap().ping();
 
     // Project with test data
-    let mut project = Project::new("unnamed".into());
-    project.layers.push_back(Rc::new(RefCell::new(Layer::new("layer1".into(), "Layer 1".into()))));
-    project.layers.push_back(Rc::new(RefCell::new(Layer::new("layer2".into(), "Layer 2".into()))));
+    let project = Rc::new(RefCell::new(Project::new("unnamed".into())));
+    project.borrow_mut().layers.push_back(Rc::new(RefCell::new(Layer::new("layer1".into(), "Layer 1".into()))));
+    project.borrow_mut().layers.push_back(Rc::new(RefCell::new(Layer::new("layer2".into(), "Layer 2".into()))));
     settings_write().maps.push_back(Arc::new(Map::new("map1".into(), "Map 1".into())));
     settings_write().maps.push_back(Arc::new(Map::new("map2".into(), "Map 2".into())));
     settings_write().maps.push_back(Arc::new(Map::new("map3".into(), "Map 3".into())));
     let map_view = Rc::new(RefCell::new(MapView::new()));
 
     // Open GUI
-    let mut main_window = gui::MapWindow::new(Box::new(project), map_view);
+    let mut main_window = gui::MapWindow::new(project, map_view);
     match main_window.run() {
         Ok(()) => { },
         Err(e) => { println!("Failed to open the main window: {}", e); },

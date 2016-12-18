@@ -4,12 +4,19 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- implemented a proper closure for layers button action
+- `dead_code` and `unused_variables` warnings are disabled in the main crate now
+### Changed
+- even more code clean-up
+
 ## [0.0.2] - 2016-12-17
 ### Added
 - included a sample GPX file for unit tests
 
 ### Changed
-- cleaned code to make it free from warnings (excluding `dead_code` and `unused_variables`)
+- cleaned the code to make it free from warnings (excluding `dead_code` and `unused_variables`)
 - relicensed the source code under GPLv3
 
 ## [0.0.1] - 2016-12-15

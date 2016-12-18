@@ -102,14 +102,6 @@ pub fn save_layer(gpx_filename: String, layer: &Rc<RefCell<Layer>>) {
     // TODO
 }
 
-// ---- PathPoint ----------------------------------------------------------------------------------
-//#[derive(Copy, Clone)]
-//pub struct PathPoint {
-//    pub location: Location,
-//    pub elevation: f64,
-//    pub time: Tm,
-//}
-
 // ---- Path ---------------------------------------------------------------------------------------
 
 pub enum PathMode {

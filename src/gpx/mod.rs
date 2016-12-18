@@ -20,15 +20,16 @@ pub mod model;
 pub mod reader;
 pub mod writer;
 
-use self::reader::*;
-//use self::writer::*;
-
-use std::fs::File;
-use std::path::Path;
-use std::io::{BufReader};
-
 #[test]
 fn test_gpx_reader() {
+    use self::reader::*;
+    //use self::writer::*;
+
+    use std::fs::File;
+    use std::path::Path;
+    use std::io::{BufReader};
+
+
     let filename = "testdata/kaunisssari.gpx";
     let file = File::open(&Path::new(filename)).unwrap();
     let reader = BufReader::new(file);

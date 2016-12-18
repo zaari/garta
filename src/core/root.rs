@@ -25,7 +25,6 @@ use core::elements::*;
 pub struct MapView {
     pub zoom_level: u8,
     pub visible_layers: LinkedList<Rc<RefCell<Layer>>>,
-    // TODO: move to a separate file
 }
 
 impl MapView {
