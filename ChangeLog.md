@@ -12,12 +12,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - code clean-up and refactoring
 
-### Removed
-
-### Fixed
-
-### Security
-
 ## [0.0.2] - 2016-12-17
 ### Added
 - included a sample GPX file for unit tests

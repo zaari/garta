@@ -18,7 +18,8 @@ use std::cell::{RefCell};
 use std::rc::{Rc};
 //use std::option::*;
 use std::collections::linked_list::LinkedList;
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{HashMap, BTreeSet, BTreeMap};
+use std::cmp::*;
 
 use core::elements::*;
 use core::map::{Map};
@@ -32,7 +33,7 @@ pub struct Atlas {
     pub name: String,
     
     /// All the layers. The first layer is rendered first.
-    pub layers: HashMap<UniqueId, Layer>,
+    pub layers: BTreeMap<UniqueId, Layer>,
     
     /// Attractions
     pub attractions: HashMap<UniqueId, Attraction>,
@@ -59,7 +60,7 @@ impl Atlas {
         Atlas{
             slug: slug,
             name: "unnamed".into(),
-            layers: HashMap::new(),
+            layers: BTreeMap::new(),
             attractions: HashMap::new(),
             waypoints: HashMap::new(),
             tracks: HashMap::new(),
@@ -124,6 +125,9 @@ pub struct Layer {
     // Map name.
     pub name: String,
     
+    // Order
+    pub order: u16,
+    
     /// True if this layer has an opaque map.
     pub backdrop: bool,
     
@@ -136,9 +140,10 @@ pub struct Layer {
 
 impl Layer {
     /// Create a new empty layer.
-    pub fn new(name: String) -> Layer {
+    pub fn new(name: String, order: u16) -> Layer {
         Layer{
             id: super::id::next_id(),
+            order: order,
             name: name,
             backdrop: false,
             map_id: NONE,
@@ -149,6 +154,29 @@ impl Layer {
     /// Id getter.    
     pub fn id(&self) -> UniqueId { self.id }
 }
+
+impl Ord for Layer {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.order.cmp(&other.order)
+    }
+}
+
+impl PartialOrd for Layer {
+    /// Ordering based on intersecting.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.order.partial_cmp(&other.order)
+    }
+}
+
+impl PartialEq for Layer {
+    /// Ordering based on intersecting.
+    fn eq(&self, other: &Self) -> bool {
+        self.order.eq(&other.order)
+    }
+}
+
+impl Eq for Layer {}
+
 
 // ---- MapView ------------------------------------------------------------------------------------
 
@@ -181,7 +209,7 @@ impl Clone for MapView {
 #[test]
 fn test_atlas() {
     // Create a atlas and layer
-    let la = Layer::new("Nimi".into());
+    let la = Layer::new("Nimi".into(), 1);
     let mut p = Atlas::new("proj".into());
     
     // Add the layer to the atlas

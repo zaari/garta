@@ -29,18 +29,19 @@ use core::root::{Atlas, MapView};
 use core::id::{UniqueId};
 //use core::settings::{settings_read};
 
-/// Main window..
+/// Main window.
 pub struct MapWindow {
     atlas: Rc<RefCell<Atlas>>,
-    map_view: MapView,
-    
-    win: Option<gtk::ApplicationWindow>,
-    coordinates_label: Option<gtk::Label>,
-    zoom_level_label: Option<gtk::Label>,
-    maps_button: Option<gtk::MenuButton>,
-    layers_button: Option<gtk::MenuButton>,
-    layers_button_label: Option<Rc<RefCell<gtk::Label>>>,
-    coordinates_button: Option<gtk::MenuButton>,    
+    map_view: Rc<RefCell<MapView>>,
+
+    // the following ones "survive" from cloning without reference counting
+    win:                    Option<gtk::ApplicationWindow>,
+    coordinates_label:      Option<gtk::Label>,
+    zoom_level_label:       Option<gtk::Label>,
+    maps_button:            Option<gtk::MenuButton>,
+    layers_button:          Option<gtk::MenuButton>,
+    layers_button_label:    Option<gtk::Label>,
+    coordinates_button:     Option<gtk::MenuButton>,    
 }
 
 impl Clone for MapWindow {
@@ -60,7 +61,7 @@ impl Clone for MapWindow {
 }
 
 impl MapWindow {
-    pub fn new(atlas: Rc<RefCell<Atlas>>, map_view: MapView) -> MapWindow {
+    pub fn new(atlas: Rc<RefCell<Atlas>>, map_view: Rc<RefCell<MapView>>) -> MapWindow {
         MapWindow {
             atlas: atlas,
             map_view: map_view,
@@ -125,7 +126,7 @@ impl MapWindow {
             self.zoom_level_label = Some(builder.get_object("zoom_level_label").unwrap());
             self.maps_button = Some(builder.get_object("maps_button").unwrap());
             self.layers_button = Some(builder.get_object("layers_button").unwrap());
-            self.layers_button_label = Some(Rc::new(RefCell::new(builder.get_object("layers_button_label").unwrap())));
+            self.layers_button_label = Some(builder.get_object("layers_button_label").unwrap());
             self.coordinates_button = Some(builder.get_object("coordinates_button").unwrap());
             
             // Event for window close button
@@ -141,7 +142,7 @@ impl MapWindow {
         }
         
         // Populate popovers and override default values
-        let zoom_level = self.map_view.zoom_level;
+        let zoom_level = self.map_view.borrow().zoom_level;
         self.populate_maps_button();
         self.populate_layers_button();
         self.populate_coordinates_button();
@@ -218,7 +219,7 @@ impl MapWindow {
             let atlas = self.atlas.borrow();
             let layers_section = gio::Menu::new();
             for (layer_id, layer) in &atlas.layers {
-                let initial_state = self.map_view.visible_layer_ids
+                let initial_state = self.map_view.borrow().visible_layer_ids
                     .iter()
                     .filter(|&la_id| la_id == layer_id)
                     .count() > 0;
@@ -234,34 +235,36 @@ impl MapWindow {
                                 );
 
                 // Action closure
-                let map_win = RefCell::new(self.clone());
+                let map_win_r = RefCell::new(self.clone());
                 action.connect_change_state( move |action, value| {
-                    let layer_id_str = &action.get_name().unwrap()["toggle_layer_".len()..];
-                    let layer_id = layer_id_str.parse::<UniqueId>().unwrap();
+                    let selected_layer_id_str = &action.get_name().unwrap()["toggle_layer_".len()..];
+                    let selected_layer_id = selected_layer_id_str.parse::<UniqueId>().unwrap();
                     if let Some(ref var) = *value {
-                        println!("toggle_layer({}) action invoked {}!", layer_id, var);
+                        println!("toggle_layer({}) action invoked {}!", selected_layer_id, var);
                         if let Some(var_bool) = bool::from_variant(var) {
                             action.set_state(var);
 
                             // Change layers list of map view
-                            let mut win = map_win.borrow_mut();
+                            let mut win = map_win_r.borrow_mut();
                             {
                                 let atlas_rr = win.atlas.clone();
                                 let atlas = atlas_rr.borrow_mut();
+                                let mut map_view = win.map_view.borrow_mut();
                                 
                                 for (layer_id, layer) in &atlas.layers {
-                                    if layer_id == layer_id {
+                                    if *layer_id == selected_layer_id {
                                         if var_bool {
                                             // Add layer
-                                            win.map_view.visible_layer_ids.push_back(*layer_id);
+                                            map_view.visible_layer_ids.push_back(*layer_id);
                                         } else {
                                             // Drop layer
-                                            win.map_view.visible_layer_ids = win.map_view.visible_layer_ids
+                                            map_view.visible_layer_ids = map_view.visible_layer_ids
                                                 .iter()
-                                                .filter(|&la_id| la_id != layer_id)
+                                                .filter(|&la_id| *la_id != *layer_id)
                                                 .cloned()
                                                 .collect::<LinkedList<UniqueId>>();
                                         }
+                                        break;
                                     }
                                 }
                             }
@@ -341,9 +344,10 @@ impl MapWindow {
     pub fn update_layers_button(&mut self) {
         if let Some(ref label) = self.layers_button_label {
             let atlas = self.atlas.borrow();
-            let m = self.map_view.visible_layer_ids.len();
+            let map_view = self.map_view.borrow();
+            let m = map_view.visible_layer_ids.len();
             let n = atlas.layers.len();
-            label.borrow().set_text(format!("Layers {}/{}", m, n).as_str());
+            label.set_text(format!("Layers {}/{}", m, n).as_str());
         }
     }
 
