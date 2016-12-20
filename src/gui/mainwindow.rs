@@ -218,14 +218,15 @@ impl MapWindow {
             // Layers section
             let atlas = self.atlas.borrow();
             let layers_section = gio::Menu::new();
-            for (layer_id, layer) in &atlas.layers {
+            for layer in atlas.layers.values().rev() {
+                let layer_id = &layer.id();
                 let initial_state = self.map_view.borrow().visible_layer_ids
                     .iter()
                     .filter(|&la_id| la_id == layer_id)
                     .count() > 0;
                 
                 // Only transparent layers are toggleable
-                if layer.backdrop { continue; }
+                if layer.backdrop() { continue; }
                 
                 // Choose map action
                 let action = gio::SimpleAction::new_stateful(
@@ -347,7 +348,8 @@ impl MapWindow {
             let map_view = self.map_view.borrow();
             let m = map_view.visible_layer_ids.len();
             let n = atlas.layers.len();
-            label.set_text(format!("Layers {}/{}", m, n).as_str());
+            let b = { if atlas.backdrop_layer_id().is_some() { 1 } else { 0 } };
+            label.set_text(format!("Layers {}/{}", m, n - b).as_str());
         }
     }
 

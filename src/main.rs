@@ -52,6 +52,7 @@ fn main() {
     let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
     {
         let mut p = atlas.borrow_mut();
+        let l0 = Layer::new("Backdrop".into(), 0); p.layers.insert(l0.id(), l0);
         let l1 = Layer::new("Layer 1".into(), 1); p.layers.insert(l1.id(), l1);
         let l2 = Layer::new("Layer 2".into(), 2); p.layers.insert(l2.id(), l2);
         let l3 = Layer::new("Layer 3".into(), 3); p.layers.insert(l3.id(), l3);

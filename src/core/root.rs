@@ -32,7 +32,7 @@ pub struct Atlas {
     pub slug: String,
     pub name: String,
     
-    /// All the layers. The first layer is rendered first.
+    /// Layers
     pub layers: BTreeMap<UniqueId, Layer>,
     
     /// Attractions
@@ -90,8 +90,8 @@ impl Atlas {
     /// Returns the backdrop layer id.
     pub fn backdrop_layer_id(&self) -> Option<UniqueId> {
         for (layer_id, layer) in &self.layers {
-            if layer.backdrop {
-                Some(layer_id);
+            if layer.backdrop() {
+                return Some(*layer_id);
             }
         }
         None
@@ -125,11 +125,8 @@ pub struct Layer {
     // Map name.
     pub name: String,
     
-    // Order
+    // Order. The layer with the highest order are on top. Backdrop layer has zer0 here.
     pub order: u16,
-    
-    /// True if this layer has an opaque map.
-    pub backdrop: bool,
     
     /// In case of backdrop Layers this is set to Some.
     pub map_id: UniqueId,
@@ -143,9 +140,8 @@ impl Layer {
     pub fn new(name: String, order: u16) -> Layer {
         Layer{
             id: super::id::next_id(),
-            order: order,
             name: name,
-            backdrop: false,
+            order: order,
             map_id: NONE,
             elements: BTreeSet::new(),
         }    
@@ -153,6 +149,11 @@ impl Layer {
 
     /// Id getter.    
     pub fn id(&self) -> UniqueId { self.id }
+    
+    /// Returns true if this is a backdrop layer (order = 0).
+    pub fn backdrop(&self) -> bool {
+        (self.order == 0)
+    }
 }
 
 impl Ord for Layer {
@@ -162,14 +163,12 @@ impl Ord for Layer {
 }
 
 impl PartialOrd for Layer {
-    /// Ordering based on intersecting.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.order.partial_cmp(&other.order)
     }
 }
 
 impl PartialEq for Layer {
-    /// Ordering based on intersecting.
     fn eq(&self, other: &Self) -> bool {
         self.order.eq(&other.order)
     }
