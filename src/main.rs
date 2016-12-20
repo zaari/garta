@@ -26,12 +26,11 @@ mod gpx;
 
 use std::cell::{RefCell};
 use std::rc::{Rc};
-use std::sync::{Arc};
 use std::process::{exit};
 
 use core::settings::{settings_write};
 use core::tiles::TileRequestQueue;
-use core::root::{Project, Layer, MapView};
+use core::root::{Atlas, Layer, MapView};
 use core::map::Map;
 
 fn main() {
@@ -49,20 +48,23 @@ fn main() {
     let trq = TileRequestQueue::new();
     trq.read().unwrap().ping();
 
-    // Project with test data
-    let project = Rc::new(RefCell::new(Project::new("unnamed".into())));
-    project.borrow_mut().layers.push_back(Rc::new(RefCell::new(Layer::new("layer1".into(), "Layer 1".into()))));
-    project.borrow_mut().layers.push_back(Rc::new(RefCell::new(Layer::new("layer2".into(), "Layer 2".into()))));
-    settings_write().maps.push_back(Arc::new(Map::new("map1".into(), "Map 1".into())));
-    settings_write().maps.push_back(Arc::new(Map::new("map2".into(), "Map 2".into())));
-    settings_write().maps.push_back(Arc::new(Map::new("map3".into(), "Map 3".into())));
-    let map_view = Rc::new(RefCell::new(MapView::new()));
+    // Atlas with test data
+    let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
+    {
+        let mut p = atlas.borrow_mut();
+        let l1 = Layer::new("Layer 1".into()); p.layers.insert(l1.id(), l1);
+        let l2 = Layer::new("Layer 2".into()); p.layers.insert(l2.id(), l2);
+        let m1 = Map::new("Map 1".into()); p.maps.insert(m1.id(), m1);
+        let m2 = Map::new("Map 2".into()); p.maps.insert(m2.id(), m2);
+        let m3 = Map::new("Map 3".into()); p.maps.insert(m3.id(), m3);
+    }
 
     // Open GUI
-    let mut main_window = gui::MapWindow::new(project, map_view);
+    let mut main_window = gui::MapWindow::new(atlas, MapView::new());
     match main_window.run() {
         Ok(()) => { },
         Err(e) => { println!("Failed to open the main window: {}", e); },
     }
 }
+
 

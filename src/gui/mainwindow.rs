@@ -25,27 +25,29 @@ use std::collections::linked_list::LinkedList;
 use self::gtk::prelude::*;
 use self::glib::variant::{FromVariant};
 use core::geo::{Location};
-use core::root::{Project, MapView, Layer};
-use core::settings::{settings_read};
+use core::root::{Atlas, MapView};
+use core::id::{UniqueId};
+//use core::settings::{settings_read};
 
 /// Main window..
 pub struct MapWindow {
-    project: Rc<RefCell<Project>>,
+    atlas: Rc<RefCell<Atlas>>,
+    map_view: MapView,
+    
     win: Option<gtk::ApplicationWindow>,
     coordinates_label: Option<gtk::Label>,
     zoom_level_label: Option<gtk::Label>,
     maps_button: Option<gtk::MenuButton>,
     layers_button: Option<gtk::MenuButton>,
     layers_button_label: Option<Rc<RefCell<gtk::Label>>>,
-    coordinates_button: Option<gtk::MenuButton>,
-    
-    map_view: Rc<RefCell<MapView>>,
+    coordinates_button: Option<gtk::MenuButton>,    
 }
 
 impl Clone for MapWindow {
     fn clone(&self) -> MapWindow {
         MapWindow {
-            project: self.project.clone(),
+            atlas: self.atlas.clone(),
+            map_view: self.map_view.clone(),
             win: self.win.clone(),
             coordinates_label: self.coordinates_label.clone(),
             zoom_level_label: self.zoom_level_label.clone(),
@@ -53,16 +55,15 @@ impl Clone for MapWindow {
             layers_button: self.layers_button.clone(),
             layers_button_label: self.layers_button_label.clone(),
             coordinates_button: self.coordinates_button.clone(),
-            
-            map_view: self.map_view.clone(),
         }
     }
 }
 
 impl MapWindow {
-    pub fn new(project: Rc<RefCell<Project>>, map_view: Rc<RefCell<MapView>>) -> MapWindow {
+    pub fn new(atlas: Rc<RefCell<Atlas>>, map_view: MapView) -> MapWindow {
         MapWindow {
-            project: project,
+            atlas: atlas,
+            map_view: map_view,
             win: None,
             coordinates_label: None,
             zoom_level_label: None,
@@ -70,7 +71,6 @@ impl MapWindow {
             layers_button: None,
             layers_button_label: None,
             coordinates_button: None,
-            map_view: map_view,
         }
     }
 
@@ -141,12 +141,14 @@ impl MapWindow {
         }
         
         // Populate popovers and override default values
+        let zoom_level = self.map_view.zoom_level;
         self.populate_maps_button();
         self.populate_layers_button();
         self.populate_coordinates_button();
         self.update_layers_button();
         self.update_coordinates_button(None);
-        self.update_zoom_level_label(0); // TODO
+        self.update_zoom_level_label(zoom_level);
+        self.update_map();
         
         // Start main
         gtk::main();
@@ -165,24 +167,37 @@ impl MapWindow {
                                 Some(&glib::VariantType::new("s").unwrap()),
                                 &"default".to_string().to_variant()
                                 );
-                action.connect_activate( |action, map_slug_variant| {
-                    if let Some(ref var) = *map_slug_variant {
-                        if let Some(map_slug) = var.get_str() {
-                            println!("choose_map action invoked {}!", map_slug);
+                let map_win = RefCell::new(self.clone());
+                action.connect_activate( move |action, map_id_variant| {
+                    if let Some(ref var) = *map_id_variant {
+                        if let Some(map_id_str) = var.get_str() {
+                            let map_id = map_id_str.parse::<UniqueId>().unwrap();
+                            println!("choose_map action invoked {}!", map_id);
                             action.set_state(var);
                             
-                            // TODO: change map on the view
+                            // Change map on the view
+                            let mut mwin = map_win.borrow_mut();
+                            {
+                                let mut atlas = mwin.atlas.borrow_mut();
+                                if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
+                                    atlas.layers.get_mut(&backdrop_layer_id).unwrap().map_id = map_id;
+                                }
+                            }
+                            
+                            // Refresh the map element
+                            mwin.update_map();
                         }
                     }
                 });
                 win.add_action(&action);
 
                 // Fill in and add the maps section
-                for map in &settings_read().maps {
+                let atlas = self.atlas.borrow();
+                for (_, map) in &atlas.maps {
                     if !map.transparent {
                         let item = gio::MenuItem::new(
                             Some(map.name.as_str()), 
-                            Some(format!("win.choose_map('{}')", map.slug).as_str()));
+                            Some(format!("win.choose_map('{}')", map.id()).as_str()));
                         menu_model.append_item(&item);
                     }
                 }
@@ -196,94 +211,89 @@ impl MapWindow {
 
     /// Populate (or re-populate) layers button popover.
     pub fn populate_layers_button(&mut self) {
-        if let Some(ref button) = self.layers_button {
-            if let Some(ref win) = self.win {
-                let menu_model = gio::Menu::new();
+        if let Some(ref button) = self.layers_button { if let Some(ref win) = self.win {
+            let menu_model = gio::Menu::new();
+            
+            // Layers section
+            let atlas = self.atlas.borrow();
+            let layers_section = gio::Menu::new();
+            for (layer_id, layer) in &atlas.layers {
+                let initial_state = self.map_view.visible_layer_ids
+                    .iter()
+                    .filter(|&la_id| la_id == layer_id)
+                    .count() > 0;
                 
-                // Layers secion
-                {
-                    let section = gio::Menu::new();
-                    
-                    // Iterate layers                
-                    for layer_rr in &self.project.borrow().layers {
-                        let initial_state = self.map_view.borrow().visible_layers
-                            .iter()
-                            .filter(|&la| la.borrow().slug == layer_rr.borrow().slug)
-                            .count() > 0;
-                        let layer = layer_rr.borrow();
-                        
-                        // Only transparent layers are toggleable
-                        if !layer.backdrop {
-                            // Choose map action
-                            let action = gio::SimpleAction::new_stateful(
-                                            format!("toggle_layer_{}", layer.slug).as_ref(), 
-                                            None,
-                                            &initial_state.to_variant()
-                                            );
+                // Only transparent layers are toggleable
+                if layer.backdrop { continue; }
+                
+                // Choose map action
+                let action = gio::SimpleAction::new_stateful(
+                                format!("toggle_layer_{}", layer_id).as_ref(), 
+                                None,
+                                &initial_state.to_variant()
+                                );
 
-                            // Action closure
-                            let map_win = RefCell::new(self.clone());
-                            action.connect_change_state( move |action, value| {
-                                let layer_slug = &action.get_name().unwrap()["toggle_layer_".len()..];
-                                if let Some(ref var) = *value {
-                                    println!("toggle_layer({}) action invoked {}!", layer_slug, var);
-                                    if let Some(var_bool) = bool::from_variant(var) {
-                                        action.set_state(var);
+                // Action closure
+                let map_win = RefCell::new(self.clone());
+                action.connect_change_state( move |action, value| {
+                    let layer_id_str = &action.get_name().unwrap()["toggle_layer_".len()..];
+                    let layer_id = layer_id_str.parse::<UniqueId>().unwrap();
+                    if let Some(ref var) = *value {
+                        println!("toggle_layer({}) action invoked {}!", layer_id, var);
+                        if let Some(var_bool) = bool::from_variant(var) {
+                            action.set_state(var);
 
-                                        // Change layer on the view
-                                        {
-                                            let win = map_win.borrow();
-                                            let proj = win.project.borrow();
-                                            for layer_r in &proj.layers {
-                                                if layer_r.borrow().slug == layer_slug {
-                                                    let mut map_view = win.map_view.borrow_mut();
-                                                    if var_bool == false {
-                                                        // Drop layer
-                                                        map_view.visible_layers = map_view.visible_layers
-                                                            .iter()
-                                                            .filter(|&la| la.borrow().slug != layer_r.borrow().slug)
-                                                            .cloned()
-                                                            .collect::<LinkedList<Rc<RefCell<Layer>>>>();
-                                                    } else {
-                                                        // Add layer
-                                                        map_view.visible_layers.push_back(layer_r.clone());
-                                                    }
-                                                }
-                                            }
+                            // Change layers list of map view
+                            let mut win = map_win.borrow_mut();
+                            {
+                                let atlas_rr = win.atlas.clone();
+                                let atlas = atlas_rr.borrow_mut();
+                                
+                                for (layer_id, layer) in &atlas.layers {
+                                    if layer_id == layer_id {
+                                        if var_bool {
+                                            // Add layer
+                                            win.map_view.visible_layer_ids.push_back(*layer_id);
+                                        } else {
+                                            // Drop layer
+                                            win.map_view.visible_layer_ids = win.map_view.visible_layer_ids
+                                                .iter()
+                                                .filter(|&la_id| la_id != layer_id)
+                                                .cloned()
+                                                .collect::<LinkedList<UniqueId>>();
                                         }
-                                        
-                                        // Change layer label
-                                        map_win.borrow_mut().update_layers_button();
                                     }
                                 }
-                            });
-                            win.add_action(&action);
-
-                            // Menu item
-                            let item = gio::MenuItem::new(
-                                Some(layer.name.as_str()), 
-                                Some(format!("win.toggle_layer_{}", layer.slug).as_str()));
-                            section.append_item(&item);
+                            }
+                            
+                            // Change layer label
+                            win.update_layers_button();
+                            
+                            // Refresh the map element
+                            win.update_map();
                         }
                     }
-                    menu_model.append_section(None, &section);
-                }
+                });
+                win.add_action(&action);
 
-                // Ops section
-                {
-                    let section = gio::Menu::new(); 
-                
-                    // Add manage item
-                    section.append_item(&gio::MenuItem::new(
-                        Some("Manage..."), 
-                        Some("win.manage_layers")));
-                    menu_model.append_section(None, &section);
-                }
-
-                // Set menu model                
-                button.set_menu_model(Some(&menu_model));
+                // Menu item
+                let item = gio::MenuItem::new(
+                    Some(layer.name.as_str()), 
+                    Some(format!("win.toggle_layer_{}", layer.id()).as_str()));
+                layers_section.append_item(&item);
             }
-        }        
+            menu_model.append_section(None, &layers_section);
+
+            // Add manage item to ops section
+            let ops_section = gio::Menu::new(); 
+            ops_section.append_item(&gio::MenuItem::new(
+                Some("Manage..."), 
+                Some("win.manage_layers")));
+            menu_model.append_section(None, &ops_section);
+
+            // Set menu model                
+            button.set_menu_model(Some(&menu_model));
+        } }   
     }
 
     /// Populate coordinates button popover.
@@ -330,10 +340,9 @@ impl MapWindow {
     /// Update layers button label.
     pub fn update_layers_button(&mut self) {
         if let Some(ref label) = self.layers_button_label {
-            let map_view = self.map_view.borrow();
-            let project = self.project.borrow();
-            let m = map_view.visible_layers.len();
-            let n = project.layers.len();
+            let atlas = self.atlas.borrow();
+            let m = self.map_view.visible_layer_ids.len();
+            let n = atlas.layers.len();
             label.borrow().set_text(format!("Layers {}/{}", m, n).as_str());
         }
     }
@@ -358,6 +367,11 @@ impl MapWindow {
                 label.set_text("--");
             }
         }
+    }
+    
+    /// Refresh the map element.
+    pub fn update_map(&mut self) {
+        // TODO
     }
 }
 

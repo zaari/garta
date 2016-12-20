@@ -14,21 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::id::*;
+
+// ---- Map ----------------------------------------------------------------------------------------
+
+/// A slippy map.
 pub struct Map {
-    pub slug: String,
+    id: UniqueId,
     pub name: String,
     pub transparent: bool,
     pub urls: Vec<String>,
 }
 
 impl Map {
-    pub fn new(slug: String, name: String) -> Map {
+    /// Constructor.
+    pub fn new(name: String) -> Map {
         Map {
-            slug: slug,
+            id: super::id::next_id(),
             name: name,
             transparent: false,
             urls: Vec::new(),
         }
     }
+
+    /// Id getter.    
+    pub fn id(&self) -> UniqueId { self.id }
 }
 

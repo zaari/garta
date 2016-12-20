@@ -18,87 +18,95 @@ use std::cell::{RefCell};
 use std::rc::{Rc};
 //use std::option::*;
 use std::collections::linked_list::LinkedList;
-use std::collections::BTreeSet;
+use std::collections::{HashMap, BTreeSet};
 
 use core::elements::*;
+use core::map::{Map};
+use core::id::{UniqueId, NONE};
 
-pub struct MapView {
-    pub zoom_level: u8,
-    pub visible_layers: LinkedList<Rc<RefCell<Layer>>>,
-}
-
-impl MapView {
-    pub fn new() -> MapView {
-        MapView {
-            zoom_level: 3,
-            visible_layers: LinkedList::new(),
-        }
-    }
-}
-
-// ---- Project ------------------------------------------------------------------------------------
+// ---- Atlas --------------------------------------------------------------------------------------
 
 /// The root object in the domain model.
-pub struct Project {
+pub struct Atlas {
     pub slug: String,
     pub name: String,
-    pub views: LinkedList<Rc<RefCell<MapView>>>,
-    pub layers: LinkedList<Rc<RefCell<Layer>>>,
     
-    pub attractions: LinkedList<Rc<RefCell<Attraction>>>,
-    pub routes: LinkedList<Rc<RefCell<Path>>>,
-    pub tracks: LinkedList<Rc<RefCell<Path>>>,
-    pub areas: LinkedList<Rc<RefCell<Area>>>,
+    /// All the layers. The first layer is rendered first.
+    pub layers: HashMap<UniqueId, Layer>,
+    
+    /// Attractions
+    pub attractions: HashMap<UniqueId, Attraction>,
+
+    /// GPX waypoints
+    pub waypoints: HashMap<UniqueId, Waypoint>,
+    
+    /// GPX routes
+    pub routes: HashMap<UniqueId, Path>,
+    
+    /// GPX tracks
+    pub tracks: HashMap<UniqueId, Path>,
+    
+    /// Areas.
+    pub areas: HashMap<UniqueId, Area>,
+    
+    /// Collection of maps.
+    pub maps: HashMap<UniqueId, Map>,
 }
 
-impl Project {
+impl Atlas {
     /// Constructor.
-    pub fn new(slug: String) -> Project {
-        Project{
+    pub fn new(slug: String) -> Atlas {
+        Atlas{
             slug: slug,
             name: "unnamed".into(),
-            views: LinkedList::new(),
-            layers: LinkedList::new(),
-            attractions: LinkedList::new(),
-            tracks: LinkedList::new(),
-            routes: LinkedList::new(),
-            areas: LinkedList::new(),
+            layers: HashMap::new(),
+            attractions: HashMap::new(),
+            waypoints: HashMap::new(),
+            tracks: HashMap::new(),
+            routes: HashMap::new(),
+            areas: HashMap::new(),
+            maps: HashMap::new(),
         }    
     }
 
-    /// Add a new player to the project.
-    pub fn add_layer(&mut self, layer: Rc<RefCell<Layer>>) {
-        self.layers.push_back(layer);
-    }
-
-    /// Load project
-    pub fn load(&mut self, status: &mut ProjectLoadSaveStatus) {
+    /// Load atlas
+    pub fn load(&mut self, status: &mut AtlasLoadSaveStatus) {
         status.total = 0;
         status.loaded = 0;
         status.ready = false;
         // TODO
     }
     
-    /// Save project
-    pub fn save(&self, status: &mut ProjectLoadSaveStatus) -> bool {
+    /// Save atlas
+    pub fn save(&self, status: &mut AtlasLoadSaveStatus) -> bool {
         status.total = 0;
         status.loaded = 0;
         status.ready = false;
         // TODO
         false
     }
+
+    /// Returns the backdrop layer id.
+    pub fn backdrop_layer_id(&self) -> Option<UniqueId> {
+        for (layer_id, layer) in &self.layers {
+            if layer.backdrop {
+                Some(layer_id);
+            }
+        }
+        None
+    }
 }
 
-// ---- ProjectLoadSaveStatus ----------------------------------------------------------------------
-pub struct ProjectLoadSaveStatus {
+// ---- AtlasLoadSaveStatus ----------------------------------------------------------------------
+pub struct AtlasLoadSaveStatus {
     pub total: i64,
     pub loaded: i64,
     pub ready: bool,
 }
 
-impl ProjectLoadSaveStatus {
-    pub fn new() -> ProjectLoadSaveStatus {
-        ProjectLoadSaveStatus {
+impl AtlasLoadSaveStatus {
+    pub fn new() -> AtlasLoadSaveStatus {
+        AtlasLoadSaveStatus {
             total: 0,
             loaded: 0,
             ready: false,
@@ -108,53 +116,75 @@ impl ProjectLoadSaveStatus {
 
 // ---- Layer --------------------------------------------------------------------------------------
 
-/// Layer in a project containing map elements.
+/// Layer in a atlas containing map elements.
 pub struct Layer {
-    pub slug: String,
+    // Unique id.
+    id: UniqueId,
+    
+    // Map name.
     pub name: String,
+    
+    /// True if this layer has an opaque map.
     pub backdrop: bool,
+    
+    /// In case of backdrop Layers this is set to Some.
+    pub map_id: UniqueId,
 
-    elements: BTreeSet<Rc<RefCell<MapElement>>>,
+    /// Map elements on the layer.
+    pub elements: BTreeSet<Rc<RefCell<MapElement>>>,
 }
 
 impl Layer {
     /// Create a new empty layer.
-    pub fn new(slug: String, name: String) -> Layer {
+    pub fn new(name: String) -> Layer {
         Layer{
-            slug: slug,
+            id: super::id::next_id(),
             name: name,
             backdrop: false,
+            map_id: NONE,
             elements: BTreeSet::new(),
         }    
     }
 
-    // Return layer slug.
-    pub fn slug(&self) -> &String {
-        &self.slug
-    }
-    
-    // Set layer slug.
-    pub fn set_slug(&mut self, slug: String) {
-        self.slug = slug;
+    /// Id getter.    
+    pub fn id(&self) -> UniqueId { self.id }
+}
+
+// ---- MapView ------------------------------------------------------------------------------------
+
+/// Map window
+pub struct MapView {
+    pub zoom_level: u8,
+    pub visible_layer_ids: LinkedList<UniqueId>,
+}
+
+impl MapView {
+    pub fn new() -> MapView {
+        MapView {
+            zoom_level: 3,
+            visible_layer_ids: LinkedList::new(),
+        }
     }
 }
 
+impl Clone for MapView {
+    fn clone(&self) -> MapView {
+        MapView {
+            zoom_level: self.zoom_level.clone(),
+            visible_layer_ids: self.visible_layer_ids.clone(),
+        }
+    }
+}
 
 // ---- tests --------------------------------------------------------------------------------------
 
 #[test]
-fn test_project() {
-    // Create a project and layer
-    let la = Rc::new(RefCell::new(Layer::new("nimi".into(), "nimi".into()) ));    
-    let mut p = Project::new("proj".into());
+fn test_atlas() {
+    // Create a atlas and layer
+    let la = Layer::new("Nimi".into());
+    let mut p = Atlas::new("proj".into());
     
-    // Add the layer to the project
-    p.add_layer(la.clone());
-    
-    // Test setting slug
-    la.borrow_mut().set_slug("1".into());
-    assert!(la.borrow().slug() == "1");
-    la.borrow_mut().set_slug("2".into());
-    assert!(la.borrow().slug() == "2");
+    // Add the layer to the atlas
+    p.layers.insert(la.id(), la);
 }
 

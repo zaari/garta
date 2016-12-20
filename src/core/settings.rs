@@ -16,9 +16,7 @@
 
 extern crate num_cpus;
 
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::collections::linked_list::{LinkedList};
-use core::map::{Map};
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// A singleton-like construct for settings_read and settings_write methods.
 lazy_static! {
@@ -26,8 +24,6 @@ lazy_static! {
 }
 
 pub struct Settings {
-    pub maps: LinkedList<Arc<Map>>,
-
     // Root data directory for the project
     data_directory: String,
     
@@ -42,7 +38,6 @@ impl Settings {
     /// Private constructor
     fn new() -> Settings {
         Settings {
-            maps: LinkedList::new(),
             data_directory: "~/.local/share/garta/data".to_string(),
             cache_directory: "~/.local/share/garta/cache".to_string(),
             worker_threads: -1,

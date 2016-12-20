@@ -26,6 +26,8 @@ use std::cmp::*;
 use core::geo::*;
 use core::root::*;
 
+use core::id::*;
+
 use gpx;
 
 // ---- MapElement ---------------------------------------------------------------------------------
@@ -61,23 +63,26 @@ impl Eq for MapElement {}
 
 /// A simple point-like destination on the map.
 pub struct Attraction { 
-    location: Location,
+    id: UniqueId,
+    pub location: Location,
+}
+
+impl Attraction {
+    /// Constructor.
+    pub fn new(loc: Location) -> Attraction {
+        Attraction {
+            id: super::id::next_id(),
+            location: loc,
+        }
+    }
+
+    /// Id getter.    
+    pub fn id(&self) -> UniqueId { self.id }
 }
 
 impl MapElement for Attraction {
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(self.location, self.location)
-    }
-}
-
-// ---- Area ---------------------------------------------------------------------------------------
-
-pub struct Area {
-}
-
-impl MapElement for Area {
-    fn bounding_box(&self) -> GeoBox {
-        GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)) // TODO
     }
 }
 
@@ -102,8 +107,36 @@ pub fn save_layer(gpx_filename: String, layer: &Rc<RefCell<Layer>>) {
     // TODO
 }
 
+// ---- Waypoint -----------------------------------------------------------------------------------
+
+/// GPX waypoint
+pub struct Waypoint { 
+    id: UniqueId,
+    location: Location,
+}
+
+impl Waypoint {
+    /// Constructor.
+    pub fn new(loc: Location) -> Waypoint {
+        Waypoint {        
+            id: super::id::next_id(),
+            location: loc,
+        }
+    }
+
+    /// Id getter.    
+    pub fn id(&self) -> UniqueId { self.id }
+}
+
+impl MapElement for Waypoint {
+    fn bounding_box(&self) -> GeoBox {
+        GeoBox::new(self.location, self.location)
+    }
+}
+
 // ---- Path ---------------------------------------------------------------------------------------
 
+/// GPX routes and tracks.
 pub enum PathMode {
     Neither,
     PathTrack { track: gpx::model::Track },
@@ -111,7 +144,7 @@ pub enum PathMode {
 }
 
 pub struct Path {
-    slug: String,
+    id: UniqueId,
     mode: PathMode,
 }
 
@@ -119,7 +152,7 @@ impl Path {
     /// Create a new empty layer.
     pub fn new(slug: String) -> Path {
         Path{
-            slug: slug,
+            id: super::id::next_id(),
             mode: PathMode::Neither,
         }    
     }
@@ -156,8 +189,18 @@ impl Path {
     }
 }
 
-// TODO
 impl MapElement for Path {
+    fn bounding_box(&self) -> GeoBox {
+        GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)) // TODO
+    }
+}
+
+// ---- Area ---------------------------------------------------------------------------------------
+
+pub struct Area {
+}
+
+impl MapElement for Area {
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)) // TODO
     }

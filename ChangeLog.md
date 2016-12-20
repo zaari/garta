@@ -6,11 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- implemented a proper closure for layers button action
-- `dead_code` and `unused_variables` warnings are disabled in the main crate now
+- maps button action
+- layers button action
 
 ### Changed
-- even more code clean-up
+- code clean-up and refactoring
+
+### Removed
+
+### Fixed
+
+### Security
 
 ## [0.0.2] - 2016-12-17
 ### Added
