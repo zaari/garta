@@ -51,7 +51,7 @@ pub struct Atlas {
     pub areas: HashMap<UniqueId, Area>,
     
     /// Collection of maps.
-    pub maps: HashMap<UniqueId, Map>,
+    pub maps: BTreeMap<UniqueId, Map>,
 }
 
 impl Atlas {
@@ -66,7 +66,7 @@ impl Atlas {
             tracks: HashMap::new(),
             routes: HashMap::new(),
             areas: HashMap::new(),
-            maps: HashMap::new(),
+            maps: BTreeMap::new(),
         }    
     }
 
@@ -96,6 +96,22 @@ impl Atlas {
         }
         None
     }
+    
+    /// Set layer order value and ensure that the BTree is valid after the change.
+    pub fn set_layer_order(&mut self, layer_id: UniqueId, order: u16) {
+        if let Some(mut layer) = self.layers.remove(&layer_id) {
+            layer.order = order;
+            self.layers.insert(layer_id, layer);
+        }
+    }
+    
+    /// Set map name value and ensure that the BTree is valid after the change.
+    pub fn set_map_name(&mut self, map_id: UniqueId, name: String) {
+        if let Some(mut map) = self.maps.remove(&map_id) {
+            map.name = name;
+            self.maps.insert(map_id, map);
+        }
+    }
 }
 
 // ---- AtlasLoadSaveStatus ----------------------------------------------------------------------
@@ -119,13 +135,14 @@ impl AtlasLoadSaveStatus {
 
 /// Layer in a atlas containing map elements.
 pub struct Layer {
-    // Unique id.
+    /// Unique id.
     id: UniqueId,
     
-    // Map name.
+    /// Map name.
     pub name: String,
     
-    // Order. The layer with the highest order are on top. Backdrop layer has zer0 here.
+    /// Order. The layer with the highest order are drawn the topmost. 
+    /// Backdrop layer is expected to be zero.
     pub order: u16,
     
     /// In case of backdrop Layers this is set to Some.
@@ -136,7 +153,7 @@ pub struct Layer {
 }
 
 impl Layer {
-    /// Create a new empty layer.
+    /// Constructor to create an empty layer.
     pub fn new(name: String, order: u16) -> Layer {
         Layer{
             id: super::id::next_id(),
@@ -179,7 +196,7 @@ impl Eq for Layer {}
 
 // ---- MapView ------------------------------------------------------------------------------------
 
-/// Map window
+/// Metadata about map window.
 pub struct MapView {
     pub zoom_level: u8,
     pub visible_layer_ids: LinkedList<UniqueId>,
@@ -207,11 +224,15 @@ impl Clone for MapView {
 
 #[test]
 fn test_atlas() {
+    let la = Layer::new("Nimi".into(), 0);
     // Create a atlas and layer
-    let la = Layer::new("Nimi".into(), 1);
-    let mut p = Atlas::new("proj".into());
+    let la_id = la.id();
+    assert!(la.backdrop() == true);
     
     // Add the layer to the atlas
+    let mut p = Atlas::new("proj".into());
     p.layers.insert(la.id(), la);
+    
+    assert!(p.backdrop_layer_id().unwrap() == la_id);
 }
 

@@ -6,11 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- maps button action
-- layers button action
+- maps button completed
+- layers button completed
 
 ### Changed
-- code clean-up and refactoring
+- code clean-up and refactoring (memory management in core module)
 
 ## [0.0.2] - 2016-12-17
 ### Added

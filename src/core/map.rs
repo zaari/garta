@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::cmp::*;
 use core::id::*;
 
 // ---- Map ----------------------------------------------------------------------------------------
@@ -40,4 +41,28 @@ impl Map {
     /// Id getter.    
     pub fn id(&self) -> UniqueId { self.id }
 }
+
+impl Ord for Map {
+    // Name-based sorting.
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for Map {
+    // Name-based sorting.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl PartialEq for Map {
+    // Name-based sorting.
+    fn eq(&self, other: &Self) -> bool {
+        self.name.eq(&other.name)
+    }
+}
+
+impl Eq for Map {}
+
 

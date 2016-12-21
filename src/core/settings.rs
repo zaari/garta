@@ -32,6 +32,9 @@ pub struct Settings {
     
     /// Maximum number of threads loading and processing data
     worker_threads: i32,
+    
+    /// Map window position and size.
+    pub main_window_geometry: String,
 }
 
 impl Settings {
@@ -41,14 +44,15 @@ impl Settings {
             data_directory: "~/.local/share/garta/data".to_string(),
             cache_directory: "~/.local/share/garta/cache".to_string(),
             worker_threads: -1,
+            main_window_geometry: "".to_string(),
         }
     }
     
     // Get data directory
-    pub fn data_directory(&self) -> &String { &self.data_directory }
+    pub fn data_directory(&self) -> &String { &self.data_directory } // TODO: expand ~
     
     /// Get cache directory
-    pub fn cache_directory(&self) -> &String { &self.cache_directory }
+    pub fn cache_directory(&self) -> &String { &self.cache_directory } // TODO: expand ~
     
     /// Get maximum number of threads
     pub fn worker_threads(&self) -> i32 { 

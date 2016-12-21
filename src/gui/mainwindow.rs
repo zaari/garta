@@ -27,7 +27,7 @@ use self::glib::variant::{FromVariant};
 use core::geo::{Location};
 use core::root::{Atlas, MapView};
 use core::id::{UniqueId};
-//use core::settings::{settings_read};
+//use core::settings::{settings_read, settings_write};
 
 /// Main window.
 pub struct MapWindow {
@@ -39,6 +39,7 @@ pub struct MapWindow {
     coordinates_label:      Option<gtk::Label>,
     zoom_level_label:       Option<gtk::Label>,
     maps_button:            Option<gtk::MenuButton>,
+    maps_button_label:      Option<gtk::Label>,
     layers_button:          Option<gtk::MenuButton>,
     layers_button_label:    Option<gtk::Label>,
     coordinates_button:     Option<gtk::MenuButton>,    
@@ -53,6 +54,7 @@ impl Clone for MapWindow {
             coordinates_label: self.coordinates_label.clone(),
             zoom_level_label: self.zoom_level_label.clone(),
             maps_button: self.maps_button.clone(),
+            maps_button_label: self.maps_button_label.clone(),
             layers_button: self.layers_button.clone(),
             layers_button_label: self.layers_button_label.clone(),
             coordinates_button: self.coordinates_button.clone(),
@@ -69,6 +71,7 @@ impl MapWindow {
             coordinates_label: None,
             zoom_level_label: None,
             maps_button: None,
+            maps_button_label: None,
             layers_button: None,
             layers_button_label: None,
             coordinates_button: None,
@@ -125,6 +128,7 @@ impl MapWindow {
             self.coordinates_label = Some(builder.get_object("coordinates_button_label").unwrap());
             self.zoom_level_label = Some(builder.get_object("zoom_level_label").unwrap());
             self.maps_button = Some(builder.get_object("maps_button").unwrap());
+            self.maps_button_label = Some(builder.get_object("maps_button_label").unwrap());
             self.layers_button = Some(builder.get_object("layers_button").unwrap());
             self.layers_button_label = Some(builder.get_object("layers_button_label").unwrap());
             self.coordinates_button = Some(builder.get_object("coordinates_button").unwrap());
@@ -146,6 +150,7 @@ impl MapWindow {
         self.populate_maps_button();
         self.populate_layers_button();
         self.populate_coordinates_button();
+        self.update_maps_button();
         self.update_layers_button();
         self.update_coordinates_button(None);
         self.update_zoom_level_label(zoom_level);
@@ -160,13 +165,25 @@ impl MapWindow {
     pub fn populate_maps_button(&mut self) {
         if let Some(ref button) = self.maps_button {
             if let Some(ref win) = self.win {
+                // TODO: clean the old map actions from win
+            
                 let menu_model = gio::Menu::new();
                 
-                // Choose map action
+                // Get backdrop map id
+                let backdrop_map_id = {
+                    let atlas = self.atlas.borrow();
+                    if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
+                        atlas.layers.get(&backdrop_layer_id).unwrap().map_id
+                    } else {
+                        0 as UniqueId
+                    }
+                };
+
+                // Simple Action for map menu button
                 let action = gio::SimpleAction::new_stateful(
                                 "choose_map", 
                                 Some(&glib::VariantType::new("s").unwrap()),
-                                &"default".to_string().to_variant()
+                                &backdrop_map_id.to_string().to_variant()
                                 );
                 let map_win = RefCell::new(self.clone());
                 action.connect_activate( move |action, map_id_variant| {
@@ -177,16 +194,17 @@ impl MapWindow {
                             action.set_state(var);
                             
                             // Change map on the view
-                            let mut mwin = map_win.borrow_mut();
+                            let mut win = map_win.borrow_mut();
                             {
-                                let mut atlas = mwin.atlas.borrow_mut();
+                                let mut atlas = win.atlas.borrow_mut();
                                 if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
                                     atlas.layers.get_mut(&backdrop_layer_id).unwrap().map_id = map_id;
                                 }
                             }
                             
-                            // Refresh the map element
-                            mwin.update_map();
+                            // Refresh the map element and the button
+                            win.update_map();
+                            win.update_maps_button();
                         }
                     }
                 });
@@ -202,7 +220,6 @@ impl MapWindow {
                         menu_model.append_item(&item);
                     }
                 }
-                action.set_state(&"map1".to_string().to_variant()); // TODO
 
                 // Set menu model                
                 button.set_menu_model(Some(&menu_model));
@@ -213,6 +230,8 @@ impl MapWindow {
     /// Populate (or re-populate) layers button popover.
     pub fn populate_layers_button(&mut self) {
         if let Some(ref button) = self.layers_button { if let Some(ref win) = self.win {
+            // TODO: clean the old layer actions from win
+            
             let menu_model = gio::Menu::new();
             
             // Layers section
@@ -338,6 +357,26 @@ impl MapWindow {
                 // Set menu model                
                 button.set_menu_model(Some(&menu_model));
             }
+        }
+    }
+
+    /// Update maps button label.
+    pub fn update_maps_button(&mut self) {
+        if let Some(ref label) = self.maps_button_label {
+            // Get map name for the backdrop layer
+            let backdrop_map_name = {
+                let atlas = self.atlas.borrow();
+                if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
+                    let map_id = atlas.layers.get(&backdrop_layer_id).unwrap().map_id;
+                    let map = atlas.maps.get(&map_id).unwrap();
+                    map.name.clone()
+                } else {
+                    "Maps".into()
+                }
+            };
+
+            // Set button label
+            label.set_text(backdrop_map_name.as_str());
         }
     }
 

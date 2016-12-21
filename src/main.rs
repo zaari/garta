@@ -48,17 +48,17 @@ fn main() {
     let trq = TileRequestQueue::new();
     trq.read().unwrap().ping();
 
-    // Atlas with test data
+    // Generated model for testing
     let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
     {
         let mut p = atlas.borrow_mut();
-        let l0 = Layer::new("Backdrop".into(), 0); p.layers.insert(l0.id(), l0);
+        let m1 = Map::new("Map 1".into()); p.maps.insert(m1.id(), m1);
+        let m2 = Map::new("Map 2".into()); let m2id = m2.id(); p.maps.insert(m2.id(), m2);
+        let m3 = Map::new("Map 3".into()); p.maps.insert(m3.id(), m3);
+        let mut l0 = Layer::new("Backdrop".into(), 0); l0.map_id = m2id; p.layers.insert(l0.id(), l0);
         let l1 = Layer::new("Layer 1".into(), 1); p.layers.insert(l1.id(), l1);
         let l2 = Layer::new("Layer 2".into(), 2); p.layers.insert(l2.id(), l2);
         let l3 = Layer::new("Layer 3".into(), 3); p.layers.insert(l3.id(), l3);
-        let m1 = Map::new("Map 1".into()); p.maps.insert(m1.id(), m1);
-        let m2 = Map::new("Map 2".into()); p.maps.insert(m2.id(), m2);
-        let m3 = Map::new("Map 3".into()); p.maps.insert(m3.id(), m3);
     }
 
     // Open GUI
@@ -69,5 +69,4 @@ fn main() {
         Err(e) => { println!("Failed to open the main window: {}", e); },
     }
 }
-
 
