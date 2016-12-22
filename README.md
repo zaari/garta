@@ -1,5 +1,5 @@
 # Garta
-Garta is a GPX editor for GNOME 3 desktop environment.
+Garta is a GPX viewer, analyzer and editor for GNOME 3 desktop environment.
 
 * [Change Log](ChangeLog.md)
 * [Road Map](RoadMap.md)

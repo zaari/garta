@@ -4,7 +4,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 ## Version 0.1
 - status bar of the main window is feature complete
 - map implemented with scrolling and zooming support
-- slippy maps can be defined in json files
+- slippy maps can be defined with json files
 - domain model persistence
 - settings persistence
 
@@ -21,6 +21,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 
 ## Version 0.4
 - vehicle types
+- track replay
 
 ## Version 0.5
 - attractions
@@ -32,10 +33,11 @@ Here is the development roadmap. This is subject to change depending on the phas
 
 ## Version 0.7
 - internationalization (contributions needed)
-- fixed cargo dependencies
+- non-floating cargo dependencies
 
 ## Version 1.0
 - stable file formats and directory structure
+- improved error handling 
 
 ## Version 1.1
 - KMZ importing and exporting
