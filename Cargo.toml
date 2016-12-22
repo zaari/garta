@@ -1,6 +1,6 @@
 [package]
 name = "garta"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [dependencies]
