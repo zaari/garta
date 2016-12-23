@@ -27,6 +27,7 @@ use self::glib::variant::{FromVariant};
 use core::geo::{Location};
 use core::root::{Atlas, MapView};
 use core::id::{UniqueId, NONE};
+use gui::mapcanvas::{build_map_widget};
 //use core::settings::{settings_read, settings_write};
 
 /// Main window.
@@ -138,6 +139,10 @@ impl MapWindow {
                 gtk::main_quit();
                 gtk::Inhibit(false)
             });
+
+            // Add map widget
+            let map_box: gtk::Container = builder.get_object("map_box").unwrap();
+            map_box.add(&build_map_widget());
             
             // Show win and enter GTK main loop
             win.show_all();

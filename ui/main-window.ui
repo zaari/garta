@@ -58,16 +58,16 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="orientation">vertical</property>
-  
         <child>
-          <object class="GtkButton">
+          <object class="GtkBox" id="map_box">
+            <property name="visible">True</property>
+            <property name="orientation">vertical</property>
           </object>
           <packing>
             <property name="expand">True</property>
             <property name="fill">True</property>
           </packing>
         </child>
-
         <child>
           <object class="GtkBox" id="bottom_bar">
             <property name="visible">True</property>

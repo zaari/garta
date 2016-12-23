@@ -4,10 +4,18 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- logging (env_logger)
+- Coordinates button completed
+
+### Fixed
+- Maps button fixes
+
 ## [0.0.3] - 2016-12-22
 ### Added
-- maps button completed
-- layers button completed
+- Maps button completed
+- Layers button completed
 
 ### Changed
 - code clean-up and refactoring (memory management in core module)

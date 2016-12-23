@@ -35,8 +35,9 @@ use core::root::{Atlas, Layer, MapView};
 use core::map::Map;
 
 fn main() {
+    // Initialize logger
     env_logger::init().unwrap();
-    info!("Garta started");
+    debug!("Garta started");
     
     // Load settings
     debug!("Loading settings");
