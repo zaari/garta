@@ -17,8 +17,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-#[macro_use]
-extern crate lazy_static;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate log;
+extern crate env_logger;
 
 mod core;
 mod gui;
@@ -34,17 +35,18 @@ use core::root::{Atlas, Layer, MapView};
 use core::map::Map;
 
 fn main() {
-    println!("Garta started");
+    env_logger::init().unwrap();
+    info!("Garta started");
     
     // Load settings
-    println!("Loading settings");
+    debug!("Loading settings");
     if let Err(e) = settings_write().load() {
-        println!("Failed to load settings: {}", e);
+        error!("Failed to load settings: {}", e);
         exit(1);
     }
     
     // Start the threads
-    println!("Starting worker threads");
+    debug!("Starting worker threads");
     let trq = TileRequestQueue::new();
     trq.read().unwrap().ping();
 
@@ -68,7 +70,7 @@ fn main() {
     let mut main_window = gui::MapWindow::new(atlas, map_view);
     match main_window.run() {
         Ok(()) => { },
-        Err(e) => { println!("Failed to open the main window: {}", e); },
+        Err(e) => { error!("Failed to open the main window: {}", e); },
     }
 }
 

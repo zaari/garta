@@ -37,19 +37,19 @@ fn test_gpx_reader() {
     let collection = read_gpx(reader);
     match collection {
         Ok(col) => {
-            println!("ok");
+            debug!("ok");
             for track in col.tracks {
-                println!("track");
+                debug!("track");
                 for seg in track.trkseg {
-                    println!("seg");
+                    debug!("seg");
                     for pt in seg.trkpt {
-                        println!("{}", pt);
+                        debug!("{}", pt);
                     }
                 }
             }
         }
         Err(e) => {
-            println!("Error: {}", e);
+            debug!("Error: {}", e);
         }
     }
 /*
@@ -57,7 +57,7 @@ fn test_gpx_reader() {
     let file = File::open(&Path::new(filename)).unwrap();
     let reader = BufReader::new(file);
     
-    println!("Opening {}", filename);
+    debug!("Opening {}", filename);
     let parser = GPXReader::new(reader);
     for ev_res in parser {
         match ev_res {
@@ -66,7 +66,7 @@ fn test_gpx_reader() {
                     GPXEvent::StartCollection { } => {
                     }
                     GPXEvent::Point { lat, lon, elev, time } => {
-                        println!("Point: {} {} {} {} {}", lat, lon, elev.unwrap_or(-1.0), 
+                        debug!("Point: {} {} {} {} {}", lat, lon, elev.unwrap_or(-1.0), 
                             match time {
                                 Some(v) => strftime(GPX_TIME_FORMAT, &v).unwrap_or("???".into()),
                                 None => { "-".into() }

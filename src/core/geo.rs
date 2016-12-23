@@ -523,7 +523,7 @@ mod tests {
     fn test_projection() {
         let mut mer = MercatorProjection::new();
         let pp = mer.northwest_global_pixel(1.0);
-        println!("mer: {}", mer.northwest_global_pixel(1.0));
+        debug!("mer: {}", mer.northwest_global_pixel(1.0));
         assert!(pp.x == -180 && pp.y == -179);
     }
 }

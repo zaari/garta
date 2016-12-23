@@ -45,10 +45,10 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
     loop {
         match parser.next() {
             Ok(xml::reader::XmlEvent::StartDocument { .. }) => {
-                println!("GPXReader: StartDocument");
+                debug!("GPXReader: StartDocument");
             }
             Ok(xml::reader::XmlEvent::StartElement { name, attributes, .. }) => {
-                println!("GPXReader: StartElement: {}", name);
+                debug!("GPXReader: StartElement: {}", name);
                 elem_characters = "".into();
                 let en = &name.local_name;
                 en_stack.push_back(en.clone());
@@ -67,7 +67,7 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                             match value.parse() {
                                 //Ok(f) => { wpt.unwrap().lat = f; }
                                 Ok(f) => { wpt.lat = f; }
-                                Err(e) => { println!("Bad GPX lat: {}" , value); }
+                                Err(e) => { debug!("Bad GPX lat: {}" , value); }
                             }
                         },
                         None => { },
@@ -78,7 +78,7 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                         Some(value) => { 
                             match value.parse() {
                                 Ok(f) => { wpt.lon = f; }
-                                Err(e) => { println!("Bad GPX lon: {}" , value); }
+                                Err(e) => { debug!("Bad GPX lon: {}" , value); }
                             }
                         },
                         None => { },
@@ -86,18 +86,18 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                     
                     col.tracks.back_mut().unwrap().trkseg.back_mut().unwrap().trkpt.push_back(wpt);
                 } else {
-                    println!("GPXReader: StartElement: unknown element: {}", name);
+                    debug!("GPXReader: StartElement: unknown element: {}", name);
                 }
             }
             Ok(xml::reader::XmlEvent::Characters(s)) => {
-                println!("GPXReader: Characters {}", s);
+                debug!("GPXReader: Characters {}", s);
                 elem_characters = s;
             }
             Ok(xml::reader::XmlEvent::EndElement { name, .. }) => {
-                println!("GPXReader: EndElement: {}", name);
+                debug!("GPXReader: EndElement: {}", name);
                 let en = name.local_name;
                 let een = en_stack.pop_back().unwrap();
-                println!("{} ? {}", en, een);
+                debug!("{} ? {}", en, een);
                 assert!(een == en);
                 if en == "trk" {
                 } else if en == "trkseg" {
@@ -107,11 +107,11 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                         Ok(wpt) => {
                             match elem_characters.parse::<f64>() {
                                 Ok(f) => { wpt.elev = Some(f); }
-                                Err(e) => { wpt.elev = None; println!("Bad GPX elevation: {}", elem_characters); }
+                                Err(e) => { wpt.elev = None; debug!("Bad GPX elevation: {}", elem_characters); }
                             }
                         } 
                         Err(e) => {
-                            println!("{}", e);
+                            debug!("{}", e);
                         }
                     }
                 } else if en == "time" {
@@ -146,27 +146,27 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                                 }
                             }
                             if wpt.time.is_some() {
-                                println!("Bad GPX time: {}", elem_characters);
+                                debug!("Bad GPX time: {}", elem_characters);
                             }
                         }
                         Err(e) => {
-                            println!("{}", e);
+                            debug!("{}", e);
                         }
                     }
                 }
             }
             Ok(xml::reader::XmlEvent::EndDocument { }) => {
-                println!("GPXReader: EndDocument");
+                debug!("GPXReader: EndDocument");
                 break;
             }
             Err(e) => {
-                println!("GPXReader: Error: {}", e);
+                debug!("GPXReader: Error: {}", e);
                 
                 // Return error if not successful
                 return Err("Something failed".into()); // FIXME
             }
             _ => {
-                //println!("GPXReader: Empty");
+                //debug!("GPXReader: Empty");
                 return Err("Empty".into());
             }
         }

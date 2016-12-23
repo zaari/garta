@@ -92,35 +92,35 @@ impl MapWindow {
             // Action for add_attraction
             let add_attraction_action = gio::SimpleAction::new("add_attraction", None);
             add_attraction_action.connect_activate(|_, _| {
-                println!("add_attraction");
+                debug!("add_attraction");
             });
             win.add_action(&add_attraction_action);
             
             // Action for add_waypoint
             let add_waypoint_action = gio::SimpleAction::new("add_waypoint", None);
             add_waypoint_action.connect_activate(|_, _| {
-                println!("add_waypoint");
+                debug!("add_waypoint");
             });
             win.add_action(&add_waypoint_action);
             
             // Action for add_track
             let add_track_action = gio::SimpleAction::new("add_track", None);
             add_track_action.connect_activate(|_, _| {
-                println!("add_track");
+                debug!("add_track");
             });
             win.add_action(&add_track_action);
             
             // Action for add_route
             let add_route_action = gio::SimpleAction::new("add_route", None);
             add_route_action.connect_activate(|_, _| {
-                println!("add_route");
+                debug!("add_route");
             });
             win.add_action(&add_route_action);
             
             // Action for manage_layers
             let add_layers_action = gio::SimpleAction::new("manage_layers", None);
             add_layers_action.connect_activate(|_, _| {
-                println!("manage_layers");
+                debug!("manage_layers");
             });
             win.add_action(&add_layers_action);
             
@@ -186,7 +186,7 @@ impl MapWindow {
                     if let Some(ref var) = *map_id_variant {
                         if let Some(map_id_str) = var.get_str() {
                             let map_id = map_id_str.parse::<UniqueId>().unwrap();
-                            println!("choose_map action invoked {}!", map_id);
+                            debug!("choose_map action invoked {}!", map_id);
                             action.set_state(var);
                             
                             // Change map id on the view
@@ -254,7 +254,7 @@ impl MapWindow {
                     let selected_layer_id_str = &action.get_name().unwrap()["toggle_layer_".len()..];
                     let selected_layer_id = selected_layer_id_str.parse::<UniqueId>().unwrap();
                     if let Some(ref var) = *value {
-                        println!("toggle_layer({}) action invoked {}!", selected_layer_id, var);
+                        debug!("toggle_layer({}) action invoked {}!", selected_layer_id, var);
                         if let Some(var_bool) = bool::from_variant(var) {
                             action.set_state(var);
 
@@ -318,20 +318,35 @@ impl MapWindow {
         if let Some(ref button) = self.coordinates_button {
             if let Some(ref win) = self.win {
                 let menu_model = gio::Menu::new();
+
+                // Get backdrop map id
+                let coordinates_format = {
+                    let view = self.map_view.borrow_mut();
+                    view.coordinates_format.clone()
+                };
                 
                 // Choose coordinates action
                 let action = gio::SimpleAction::new_stateful(
                                 "choose_coordinates", 
                                 Some(&glib::VariantType::new("s").unwrap()),
-                                &"default".to_string().to_variant(),
+                                &coordinates_format.to_variant(),
                                 );
-                action.connect_activate( |action, coordinates_slug_variant| {
+                let map_win_r = RefCell::new(self.clone());
+                action.connect_activate( move |action, coordinates_slug_variant| {
                     if let Some(ref var) = *coordinates_slug_variant {
-                        if let Some(coordinates_slug) = var.get_str() {
-                            println!("choose_cordinates action invoked {}!", coordinates_slug);
+                        if let Some(coordinates_format) = var.get_str() {
+                            debug!("choose_cordinates action invoked {}!", coordinates_format);
                             action.set_state(var);
                             
-                            // TODO: change coordinates on the view
+                            // Change coordinates format on the view
+                            let mut win = map_win_r.borrow_mut();
+                            {
+                                let mut view = win.map_view.borrow_mut();
+                                view.coordinates_format = coordinates_format.into();
+                            }
+                            
+                            // Refresh the button
+                            win.update_coordinates_button(None);
                         }
                     }
                 });
@@ -346,7 +361,6 @@ impl MapWindow {
                     Some("DDD.ddddd°"), Some("win.choose_coordinates('d')")));
                 menu_model.append_item(&gio::MenuItem::new(
                     Some("-DDD.ddddd"), Some("win.choose_coordinates('-d')")));
-                action.set_state(&"dm".to_string().to_variant()); // TODO
 
                 // Set menu model                
                 button.set_menu_model(Some(&menu_model));
@@ -361,7 +375,8 @@ impl MapWindow {
             let backdrop_map_name = {
                 let atlas = self.atlas.borrow();
                 let view = self.map_view.borrow();
-                if view.map_id == NONE {
+                debug!("update_maps_button_ {}", view.map_id);
+                if view.map_id != NONE {
                     let map = atlas.maps.get(&view.map_id).unwrap();
                     map.name.clone()
                 } else {

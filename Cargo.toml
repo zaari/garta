@@ -12,6 +12,8 @@ xml-rs = "*"
 serde = "*"
 serde_json = "*"
 lazy_static = "*"
+log = "*"
+env_logger = "*"
 
 glib = "*"
 gdk = "*"

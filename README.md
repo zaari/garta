@@ -21,6 +21,7 @@ cd garta
 The standard cargo commands can be used to run the unit tests, run the application or even build a release.
 
 ```bash
+export RUST_LOG=warn,garta=debug
 cargo test
 cargo run
 cargo build --release

@@ -225,7 +225,7 @@ impl TileRequestQueue {
         // Start worker threads        
         let n = settings_read().worker_threads();
         for i in 0..n {
-            println!("thread {}", i);
+            debug!("thread {}", i);
             let trqt   = trq.clone();
             let nt_m  = trqt.write().unwrap().new_tiles_mutex.clone();
             let nt_cv = trqt.write().unwrap().new_tiles_condvar.clone();

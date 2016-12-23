@@ -204,6 +204,9 @@ pub struct MapView {
     
     /// Backdrop layer map id.
     pub map_id: UniqueId,
+    
+    /// Coordinates format used within the view.
+    pub coordinates_format: String,
 }
 
 impl MapView {
@@ -212,6 +215,7 @@ impl MapView {
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
             map_id: NONE,
+            coordinates_format: "dm".into(),
         }
     }
 }
@@ -222,6 +226,7 @@ impl Clone for MapView {
             zoom_level: self.zoom_level.clone(),
             visible_layer_ids: self.visible_layer_ids.clone(),
             map_id: self.map_id,
+            coordinates_format: self.coordinates_format.clone(),
         }
     }
 }
