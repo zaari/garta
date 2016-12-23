@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::cell::{RefCell};
-use std::rc::{Rc};
-//use std::option::*;
 use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use std::cmp::*;
@@ -145,11 +142,12 @@ pub struct Layer {
     /// Backdrop layer is expected to be zero.
     pub order: u16,
     
-    /// In case of backdrop Layers this is set to Some.
+    /// In case of transparent map layers this is set to Some, otherwise None.
+    /// Notice that the backdrop map layer is defined in MapView.
     pub map_id: UniqueId,
 
     /// Map elements on the layer.
-    pub elements: BTreeSet<Rc<RefCell<MapElement>>>,
+    pub element_ids: BTreeSet<UniqueId>,
 }
 
 impl Layer {
@@ -160,7 +158,7 @@ impl Layer {
             name: name,
             order: order,
             map_id: NONE,
-            elements: BTreeSet::new(),
+            element_ids: BTreeSet::new(),
         }    
     }
 
@@ -198,8 +196,14 @@ impl Eq for Layer {}
 
 /// Metadata about map window.
 pub struct MapView {
+    /// Zoom level of the view.
     pub zoom_level: u8,
+    
+    /// Visible layer ids.
     pub visible_layer_ids: LinkedList<UniqueId>,
+    
+    /// Backdrop layer map id.
+    pub map_id: UniqueId,
 }
 
 impl MapView {
@@ -207,6 +211,7 @@ impl MapView {
         MapView {
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
+            map_id: NONE,
         }
     }
 }
@@ -216,6 +221,7 @@ impl Clone for MapView {
         MapView {
             zoom_level: self.zoom_level.clone(),
             visible_layer_ids: self.visible_layer_ids.clone(),
+            map_id: self.map_id,
         }
     }
 }

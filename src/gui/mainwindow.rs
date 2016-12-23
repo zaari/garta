@@ -26,7 +26,7 @@ use self::gtk::prelude::*;
 use self::glib::variant::{FromVariant};
 use core::geo::{Location};
 use core::root::{Atlas, MapView};
-use core::id::{UniqueId};
+use core::id::{UniqueId, NONE};
 //use core::settings::{settings_read, settings_write};
 
 /// Main window.
@@ -171,12 +171,8 @@ impl MapWindow {
                 
                 // Get backdrop map id
                 let backdrop_map_id = {
-                    let atlas = self.atlas.borrow();
-                    if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
-                        atlas.layers.get(&backdrop_layer_id).unwrap().map_id
-                    } else {
-                        0 as UniqueId
-                    }
+                    let view = self.map_view.borrow_mut();
+                    view.map_id
                 };
 
                 // Simple Action for map menu button
@@ -193,13 +189,11 @@ impl MapWindow {
                             println!("choose_map action invoked {}!", map_id);
                             action.set_state(var);
                             
-                            // Change map on the view
+                            // Change map id on the view
                             let mut win = map_win.borrow_mut();
                             {
-                                let mut atlas = win.atlas.borrow_mut();
-                                if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
-                                    atlas.layers.get_mut(&backdrop_layer_id).unwrap().map_id = map_id;
-                                }
+                                let mut view = win.map_view.borrow_mut();
+                                view.map_id = map_id;
                             }
                             
                             // Refresh the map element and the button
@@ -269,16 +263,16 @@ impl MapWindow {
                             {
                                 let atlas_rr = win.atlas.clone();
                                 let atlas = atlas_rr.borrow_mut();
-                                let mut map_view = win.map_view.borrow_mut();
+                                let mut view = win.map_view.borrow_mut();
                                 
                                 for (layer_id, layer) in &atlas.layers {
                                     if *layer_id == selected_layer_id {
                                         if var_bool {
                                             // Add layer
-                                            map_view.visible_layer_ids.push_back(*layer_id);
+                                            view.visible_layer_ids.push_back(*layer_id);
                                         } else {
                                             // Drop layer
-                                            map_view.visible_layer_ids = map_view.visible_layer_ids
+                                            view.visible_layer_ids = view.visible_layer_ids
                                                 .iter()
                                                 .filter(|&la_id| *la_id != *layer_id)
                                                 .cloned()
@@ -366,9 +360,9 @@ impl MapWindow {
             // Get map name for the backdrop layer
             let backdrop_map_name = {
                 let atlas = self.atlas.borrow();
-                if let Some(backdrop_layer_id) = atlas.backdrop_layer_id() {
-                    let map_id = atlas.layers.get(&backdrop_layer_id).unwrap().map_id;
-                    let map = atlas.maps.get(&map_id).unwrap();
+                let view = self.map_view.borrow();
+                if view.map_id == NONE {
+                    let map = atlas.maps.get(&view.map_id).unwrap();
                     map.name.clone()
                 } else {
                     "Maps".into()

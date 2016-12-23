@@ -12,6 +12,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 - GPX loading
 - track rendering and statistics
 - layers
+- transparent map layers
 
 ## Version 0.3
 - track editing
