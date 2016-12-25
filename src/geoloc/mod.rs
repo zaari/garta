@@ -14,10 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod id;
-pub mod root;
-pub mod map;
-pub mod tiles;
-pub mod settings;
-pub mod elements;
+extern crate time;
+
+pub mod geo;
+pub mod gpx;
+
 

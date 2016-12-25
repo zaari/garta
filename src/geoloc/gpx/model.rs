@@ -21,6 +21,8 @@ use std::collections::linked_list::LinkedList;
 use self::time::{Tm};
 use std::fmt;
 
+use super::super::geo::Location;
+
 /// GPX File.
 pub struct Collection {
     pub version: String,
@@ -57,8 +59,7 @@ pub struct Metadata {
 
 /// GPX waypoint, route point or track point.
 pub struct Point {
-    pub lat: f64, 
-    pub lon: f64, 
+    pub location: Location,
     pub elev: Option<f64>, 
     pub time: Option<Tm>,
     pub magvar: Option<f64>,
@@ -85,8 +86,7 @@ pub struct Point {
 impl Point {
     pub fn new(lat: f64, lon: f64) -> Point {
         Point {
-            lat: lat,
-            lon: lon,
+            location: Location::new(lat, lon),
             elev: None,
             time: None,
             magvar: None,
@@ -114,7 +114,7 @@ impl Point {
 
 impl fmt::Display for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}, {})", self.lat, self.lon)
+        write!(f, "({})", self.location)
     }
 }
 

@@ -23,7 +23,7 @@ extern crate env_logger;
 
 mod core;
 mod gui;
-mod gpx;
+mod geoloc;
 
 use std::cell::{RefCell};
 use std::rc::{Rc};

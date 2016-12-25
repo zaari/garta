@@ -18,6 +18,7 @@ use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use std::cmp::*;
 
+use geoloc::geo::{Location, GeoBox};
 use core::elements::*;
 use core::map::{Map};
 use core::id::{UniqueId, NONE};
@@ -196,6 +197,9 @@ impl Eq for Layer {}
 
 /// Metadata about map window.
 pub struct MapView {
+    /// 
+    pub bounding_box: GeoBox,
+
     /// Zoom level of the view.
     pub zoom_level: u8,
     
@@ -212,6 +216,7 @@ pub struct MapView {
 impl MapView {
     pub fn new() -> MapView {
         MapView {
+            bounding_box: GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)),
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
             map_id: NONE,
@@ -223,6 +228,7 @@ impl MapView {
 impl Clone for MapView {
     fn clone(&self) -> MapView {
         MapView {
+            bounding_box: self.bounding_box,
             zoom_level: self.zoom_level.clone(),
             visible_layer_ids: self.visible_layer_ids.clone(),
             map_id: self.map_id,

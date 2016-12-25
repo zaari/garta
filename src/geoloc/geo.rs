@@ -48,8 +48,8 @@ impl fmt::Display for PixelPos {
 /// Map coordinates in degrees.
 #[derive(Copy, Clone)]
 pub struct Location {
-    lat: f64, // south-north
-    lon: f64, // west-east
+    pub lat: f64, // south-north
+    pub lon: f64, // west-east
 }
 
 impl Location {

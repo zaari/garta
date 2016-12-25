@@ -24,7 +24,8 @@ use std::option::{Option};
 use std::collections::linked_list::LinkedList;
 use self::time::{strptime};
 
-use gpx::model::*;
+use super::model::*;
+use super::super::geo::Location;
 
 pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
     let mut parser = xml::reader::EventReader::new_with_config(
@@ -66,7 +67,7 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                         Some(value) => { 
                             match value.parse() {
                                 //Ok(f) => { wpt.unwrap().lat = f; }
-                                Ok(f) => { wpt.lat = f; }
+                                Ok(f) => { wpt.location = Location::new(f, wpt.location.lon); }
                                 Err(e) => { debug!("Bad GPX lat: {}" , value); }
                             }
                         },
@@ -77,7 +78,7 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                     match pick_attr_value("lon", &attributes) {
                         Some(value) => { 
                             match value.parse() {
-                                Ok(f) => { wpt.lon = f; }
+                                Ok(f) => { wpt.location = Location::new(wpt.location.lat, f); }
                                 Err(e) => { debug!("Bad GPX lon: {}" , value); }
                             }
                         },

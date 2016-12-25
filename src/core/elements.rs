@@ -20,15 +20,13 @@ extern crate xml;
 use std::cell::{RefCell};
 use std::rc::{Rc};
 use std::option::{Option};
-
 use std::cmp::*;
 
-use core::geo::*;
 use core::root::*;
-
 use core::id::*;
 
-use gpx;
+use geoloc;
+use geoloc::geo::{GeoBox, Location};
 
 // ---- MapElement ---------------------------------------------------------------------------------
 
@@ -139,8 +137,8 @@ impl MapElement for Waypoint {
 /// GPX routes and tracks.
 pub enum PathMode {
     Neither,
-    PathTrack { track: gpx::model::Track },
-    PathRoute { route: gpx::model::Route },
+    PathTrack { track: geoloc::gpx::model::Track },
+    PathRoute { route: geoloc::gpx::model::Route },
 }
 
 pub struct Path {

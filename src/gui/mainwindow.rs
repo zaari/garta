@@ -24,7 +24,7 @@ use std::result::*;
 use std::collections::linked_list::LinkedList;
 use self::gtk::prelude::*;
 use self::glib::variant::{FromVariant};
-use core::geo::{Location};
+use geoloc::geo::{Location};
 use core::root::{Atlas, MapView};
 use core::id::{UniqueId, NONE};
 use gui::mapcanvas::{build_map_widget};
