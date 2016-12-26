@@ -18,7 +18,7 @@ extern crate regex;
 
 use std::f64::consts;
 use std::fmt;
-use std::cmp::*;
+//use std::cmp::*;
 use self::regex::Regex;
 
 // ---- PixelPos -----------------------------------------------------------------------------------
@@ -256,6 +256,7 @@ impl fmt::Display for GeoBox {
     }
 }
 
+/*
 impl Ord for GeoBox {
     /// Ordering based on intersecting. If the boxes intersect they are considered to be equal.
     fn cmp(&self, other: &Self) -> Ordering {
@@ -290,6 +291,7 @@ impl PartialEq for GeoBox {
 }
 
 impl Eq for GeoBox {}
+*/
 
 // ---- Projection ---------------------------------------------------------------------------------
 
@@ -391,7 +393,7 @@ fn degrees_between(minimum: f64, mut degrees: f64, maximum: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeSet;
+//    use std::collections::BTreeSet;
 
     /// True if val is between min and max values.
     fn close_enough_to(val: f64, expected: f64, max_error: f64) -> bool { (val - expected).abs() <= max_error }
@@ -508,6 +510,7 @@ mod tests {
         assert!( globe179.intersects(pacific_ocean) );  
     }
 
+/*
     #[test]
     fn test_geobox_cmp() {
         let mut bset: BTreeSet<GeoBox> = BTreeSet::new();
@@ -518,6 +521,7 @@ mod tests {
         bset.insert(view);
         // TODO
     }
+*/
 
     #[test]
     fn test_projection() {

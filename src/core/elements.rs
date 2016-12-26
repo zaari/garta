@@ -19,14 +19,14 @@ extern crate xml;
 
 use std::cell::{RefCell};
 use std::rc::{Rc};
-use std::option::{Option};
-use std::cmp::*;
+//use std::option::{Option};
+//use std::cmp::*;
 
 use core::root::*;
 use core::id::*;
 
-use geoloc;
-use geoloc::geo::{GeoBox, Location};
+use geocoord;
+use geocoord::geo::{GeoBox, Location};
 
 // ---- MapElement ---------------------------------------------------------------------------------
 
@@ -37,6 +37,7 @@ pub trait MapElement {
     fn bounding_box(&self) -> GeoBox;
 }
 
+/*
 impl Ord for MapElement {
     fn cmp(&self, other: &Self) -> Ordering {
         self.bounding_box().cmp(&other.bounding_box())
@@ -56,6 +57,7 @@ impl PartialEq for MapElement {
 }
 
 impl Eq for MapElement {}
+*/
 
 // ---- Attraction ---------------------------------------------------------------------------------
 
@@ -137,8 +139,8 @@ impl MapElement for Waypoint {
 /// GPX routes and tracks.
 pub enum PathMode {
     Neither,
-    PathTrack { track: geoloc::gpx::model::Track },
-    PathRoute { route: geoloc::gpx::model::Route },
+    PathTrack { track: geocoord::gpx::model::Track },
+    PathRoute { route: geocoord::gpx::model::Route },
 }
 
 pub struct Path {

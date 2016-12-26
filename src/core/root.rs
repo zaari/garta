@@ -18,7 +18,7 @@ use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use std::cmp::*;
 
-use geoloc::geo::{Location, GeoBox};
+use geocoord::geo::{Location, GeoBox};
 use core::elements::*;
 use core::map::{Map};
 use core::id::{UniqueId, NONE};
@@ -197,7 +197,7 @@ impl Eq for Layer {}
 
 /// Metadata about map window.
 pub struct MapView {
-    /// 
+    /// Outline of the view area.
     pub bounding_box: GeoBox,
 
     /// Zoom level of the view.
