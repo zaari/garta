@@ -1,4 +1,4 @@
-// Garta - GPX editor and analyser
+// Garta - GPX viewer and editor
 // Copyright (C) 2016  Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ use std::rc::{Rc};
 use std::process::{exit};
 
 use core::settings::{settings_write};
-use core::tiles::TileRequestQueue;
+use core::tiles::TileCache;
 use core::root::{Atlas, Layer, MapView};
 use core::map::Map;
 
@@ -48,8 +48,8 @@ fn main() {
     
     // Start the threads
     debug!("Starting worker threads");
-    let trq = TileRequestQueue::new();
-    trq.read().unwrap().ping();
+    let tcache = Rc::new(RefCell::new(TileCache::new()));
+    tcache.borrow_mut().init();
 
     // Generated model for testing
     let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
@@ -68,7 +68,7 @@ fn main() {
     // Open GUI
     let map_view = Rc::new(RefCell::new(MapView::new()));
     map_view.borrow_mut().map_id = m2id;
-    let mut main_window = gui::MapWindow::new(atlas, map_view);
+    let mut main_window = gui::MapWindow::new(atlas, map_view, tcache);
     match main_window.run() {
         Ok(()) => { },
         Err(e) => { error!("Failed to open the main window: {}", e); },

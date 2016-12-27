@@ -1,4 +1,4 @@
-// Garta - GPX editor and analyser
+// Garta - GPX viewer and editor
 // Copyright (C) 2016  Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify

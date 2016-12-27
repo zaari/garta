@@ -1,4 +1,4 @@
-// Garta - GPX editor and analyser
+// Garta - GPX viewer and editor
 // Copyright (C) 2016  Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,13 +27,15 @@ use self::glib::variant::{FromVariant};
 use geocoord::geo::{Location};
 use core::root::{Atlas, MapView};
 use core::id::{UniqueId, NONE};
-use gui::mapcanvas::{build_map_widget};
+use core::tiles::{TileCache};
+use gui::mapcanvas::{build_map_canvas};
 //use core::settings::{settings_read, settings_write};
 
 /// Main window.
 pub struct MapWindow {
-    atlas: Rc<RefCell<Atlas>>,
-    map_view: Rc<RefCell<MapView>>,
+    pub atlas: Rc<RefCell<Atlas>>,
+    pub map_view: Rc<RefCell<MapView>>,
+    pub tile_cache: Rc<RefCell<TileCache>>,
 
     // the following ones "survive" from cloning without reference counting
     win:                    Option<gtk::ApplicationWindow>,
@@ -51,6 +53,7 @@ impl Clone for MapWindow {
         MapWindow {
             atlas: self.atlas.clone(),
             map_view: self.map_view.clone(),
+            tile_cache : self.tile_cache.clone(),
             win: self.win.clone(),
             coordinates_label: self.coordinates_label.clone(),
             zoom_level_label: self.zoom_level_label.clone(),
@@ -64,10 +67,11 @@ impl Clone for MapWindow {
 }
 
 impl MapWindow {
-    pub fn new(atlas: Rc<RefCell<Atlas>>, map_view: Rc<RefCell<MapView>>) -> MapWindow {
+    pub fn new(atlas: Rc<RefCell<Atlas>>, map_view: Rc<RefCell<MapView>>, tile_cache: Rc<RefCell<TileCache>>) -> MapWindow {
         MapWindow {
             atlas: atlas,
             map_view: map_view,
+            tile_cache: tile_cache,
             win: None,
             coordinates_label: None,
             zoom_level_label: None,
@@ -89,6 +93,7 @@ impl MapWindow {
         // Load resources from a glade file
         let builder = gtk::Builder::new_from_file("ui/main-window.ui");
         self.win = builder.get_object("main_window");
+        let self_clone = self.clone();
         if let Some(ref mut win) = self.win {
             // Action for add_attraction
             let add_attraction_action = gio::SimpleAction::new("add_attraction", None);
@@ -142,7 +147,7 @@ impl MapWindow {
 
             // Add map widget
             let map_box: gtk::Container = builder.get_object("map_box").unwrap();
-            map_box.add(&build_map_widget());
+            map_box.add(&build_map_canvas(&self_clone));
             
             // Show win and enter GTK main loop
             win.show_all();
