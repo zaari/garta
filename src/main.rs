@@ -30,7 +30,7 @@ use std::rc::{Rc};
 use std::process::{exit};
 
 use core::settings::{settings_write};
-use core::tiles::TileCache;
+use core::tiles::{create_tile_cache};
 use core::root::{Atlas, Layer, MapView};
 use core::map::Map;
 
@@ -48,7 +48,7 @@ fn main() {
     
     // Start the threads
     debug!("Starting worker threads");
-    let tcache = Rc::new(RefCell::new(TileCache::new()));
+    let tcache = create_tile_cache();
     tcache.borrow_mut().init();
 
     // Generated model for testing
@@ -68,10 +68,14 @@ fn main() {
     // Open GUI
     let map_view = Rc::new(RefCell::new(MapView::new()));
     map_view.borrow_mut().map_id = m2id;
-    let mut main_window = gui::MapWindow::new(atlas, map_view, tcache);
-    match main_window.run() {
+    let main_window = Rc::new(RefCell::new(gui::MapWindow::new(atlas, map_view, tcache.clone())));
+    tcache.borrow_mut().observer = Some(main_window.clone());
+    match main_window.borrow_mut().init() {
         Ok(()) => { },
         Err(e) => { error!("Failed to open the main window: {}", e); },
     }
+
+    // Main loop
+    gui::main();
 }
 

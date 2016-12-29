@@ -27,6 +27,7 @@ use std::time::{Instant, Duration};
 use self::gtk::prelude::*;
 
 use super::mainwindow::MapWindow;
+use core::tiles::*;
 
 /// Create map canvas widget with all the needed signals connected.
 pub fn build_map_canvas(map_win: &MapWindow) -> gtk::DrawingArea {
@@ -72,9 +73,31 @@ fn draw(widget: &gtk::DrawingArea, c: &cairo::Context, map_win_rr: Rc<RefCell<Ma
     let start_time = Instant::now();
     let (width, height) = widget.get_size_request();
 
-    c.move_to(50.0, (width as f64) * 0.5);
-    c.set_font_size(18.0);
-    c.show_text("This is going to be the map area");
+    // Tile source
+    let mut tile_source = TileSource::new();
+    tile_source.slug = "osm-carto".into();
+    tile_source.name = "OpenStreetMap Carto".into();
+    tile_source.urls.push("http://a.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
+    tile_source.urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
+    tile_source.urls.push("http://c.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
+
+    // Tile dimensions
+    let tw = tile_source.tile_width;
+    let th = tile_source.tile_height;
+
+    // Tile cache    
+    let tcache_rr = map_win_rr.borrow().tile_cache.clone();
+    let mut tcache = tcache_rr.borrow_mut();
+    let treq = TileRequest::new(1, 1, 0, 0, 1, 1, tile_source);
+    if let Some(tile) = tcache.get_tile(&treq) {
+        tile.get_surface();
+
+        // Draw tile
+        if let Some(ref tile_surface) = tile.get_surface() {
+            c.set_source_surface(tile_surface, ((width - tw) / 2) as f64, ((height - th) / 2) as f64);
+            c.paint();
+        }
+    }
     
     if log_enabled!(Debug) { debug!("draw time: {} ms width={}", duration_to_millisconds(&start_time.elapsed()), width); }
 }
@@ -106,7 +129,7 @@ fn button_release_event(widget: &gtk::DrawingArea, ev: &gdk::EventButton, map_wi
 /// Event handler for mouse motion. Either drag or scroll.
 fn motion_notify_event(widget: &gtk::DrawingArea, ev: &gdk::EventMotion, map_win_rr: Rc<RefCell<MapWindow>>) {
     let (x, y) = ev.get_position();
-    debug!("motion_notify_event: {},{}", x as i32, y as i32);
+    //debug!("motion_notify_event: {},{}", x as i32, y as i32);
 }
 
 /// Convert duration to milliseconds

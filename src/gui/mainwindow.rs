@@ -27,7 +27,7 @@ use self::glib::variant::{FromVariant};
 use geocoord::geo::{Location};
 use core::root::{Atlas, MapView};
 use core::id::{UniqueId, NONE};
-use core::tiles::{TileCache};
+use core::tiles::{TileCache, TileObserver, TileRequest};
 use gui::mapcanvas::{build_map_canvas};
 //use core::settings::{settings_read, settings_write};
 
@@ -45,7 +45,8 @@ pub struct MapWindow {
     maps_button_label:      Option<gtk::Label>,
     layers_button:          Option<gtk::MenuButton>,
     layers_button_label:    Option<gtk::Label>,
-    coordinates_button:     Option<gtk::MenuButton>,    
+    coordinates_button:     Option<gtk::MenuButton>,
+    mapcanvas:              Option<gtk::DrawingArea>,
 }
 
 impl Clone for MapWindow {
@@ -62,6 +63,7 @@ impl Clone for MapWindow {
             layers_button: self.layers_button.clone(),
             layers_button_label: self.layers_button_label.clone(),
             coordinates_button: self.coordinates_button.clone(),
+            mapcanvas: self.mapcanvas.clone(),
         }
     }
 }
@@ -80,11 +82,12 @@ impl MapWindow {
             layers_button: None,
             layers_button_label: None,
             coordinates_button: None,
+            mapcanvas: None,
         }
     }
 
     /// Build main window and run GTK main.
-    pub fn run(&mut self) -> Result<(), &'static str> {
+    pub fn init(&mut self) -> Result<(), &'static str> {
         // Initialize GTK
         if gtk::init().is_err() {
             return Err("Failed to initialize GTK.");
@@ -147,7 +150,8 @@ impl MapWindow {
 
             // Add map widget
             let map_box: gtk::Container = builder.get_object("map_box").unwrap();
-            map_box.add(&build_map_canvas(&self_clone));
+            self.mapcanvas = Some(build_map_canvas(&self_clone));
+            map_box.add(self.mapcanvas.as_mut().unwrap());
             
             // Show win and enter GTK main loop
             win.show_all();
@@ -166,8 +170,6 @@ impl MapWindow {
         self.update_zoom_level_label(zoom_level);
         self.update_map();
         
-        // Start main
-        gtk::main();
         Ok(())
     }
 
@@ -385,7 +387,7 @@ impl MapWindow {
             let backdrop_map_name = {
                 let atlas = self.atlas.borrow();
                 let view = self.map_view.borrow();
-                debug!("update_maps_button_ {}", view.map_id);
+                debug!("update_maps_button {}", view.map_id);
                 if view.map_id != NONE {
                     let map = atlas.maps.get(&view.map_id).unwrap();
                     map.name.clone()
@@ -433,9 +435,20 @@ impl MapWindow {
         }
     }
     
-    /// Refresh the map element.
+    /// Full refresh of the map canvas.
     pub fn update_map(&mut self) {
-        // TODO
+        if let Some(ref mapcanvas) = self.mapcanvas {
+            mapcanvas.queue_draw();
+        }
+    }
+}
+
+impl TileObserver for MapWindow {
+    fn tile_loaded(&self, treq: &TileRequest) {
+        debug!("tile_loaded: {:?}", treq);
+        if let Some(ref mapcanvas) = self.mapcanvas {
+            mapcanvas.queue_draw(); // TODO: only partial redraw
+        }
     }
 }
 

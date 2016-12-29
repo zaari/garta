@@ -4,10 +4,11 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.0.4] - 2016-12-29
 ### Added
-- logging (env_logger)
+- Multi-threaded background tile loading
 - Coordinates button completed
+- logging (env_logger)
 
 ### Fixed
 - Maps button fixes

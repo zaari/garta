@@ -1,26 +1,28 @@
 [package]
 name = "garta"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [dependencies]
-regex = "*"
-time = "*"
-image = "*"
-num_cpus = "^1"
-xml-rs = "*"
-serde = "*"
-serde_json = "*"
-lazy_static = "*"
-log = "*"
-env_logger = "*"
+regex       = "*" # "^0.1.80"
+time        = "*" # "^0.1.35"
+rand        = "*" # "^0.3.15"
+hyper       = "*" # "^0.9.14"
+image       = "*" # "^0.10.4"
+num_cpus    = "*" # "^1.2.0"
+xml-rs      = "*" # "^0.3.5"
+serde       = "*" # "^0.8.21"
+serde_json  = "*" # "^0.8.4"
+lazy_static = "*" # "^0.2.2"
+log         = "*" # "^0.3.6"
+env_logger  = "*" # "^0.3.5"
 
-glib = "*"
-gdk = "*"
-gdk-pixbuf = "*"
-gtk = "*"
-gio = "*"
-cairo-rs = "*"
+glib        = "*" # "^0.1.1"
+gdk         = "*" # "^0.5.1"
+gdk-pixbuf  = "*" # "^0.1.1"
+gtk         = "*" # "^0.1.1"
+gio         = "*" # "^0.1.1"
+cairo-rs    = "*" # "^0.1.1"
 
 [features]
 default = ["gtk/v3_14"]

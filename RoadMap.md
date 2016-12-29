@@ -7,6 +7,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 - slippy maps can be defined with json files
 - domain model persistence
 - settings persistence
+- non-floating dependency version requirements
 
 ## Version 0.2
 - GPX loading
@@ -34,7 +35,6 @@ Here is the development roadmap. This is subject to change depending on the phas
 
 ## Version 0.7
 - internationalization (contributions needed)
-- non-floating cargo dependencies
 
 ## Version 1.0
 - stable file formats and directory structure

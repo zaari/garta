@@ -18,3 +18,4 @@ cargo test
 
 # Build on demand without warnings
 while inotifywait -e close_write -r . &>/dev/null ; do sync ; reset ; cargo test ; done
+

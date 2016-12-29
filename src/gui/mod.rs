@@ -14,8 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+extern crate gtk;
+
 pub use self::mainwindow::*;
 pub mod mainwindow;
 
 pub use self::mapcanvas::*;
 pub mod mapcanvas;
+
+/// Run main loop
+pub fn main() {
+    // Start GTK main
+    gtk::main();
+}
+

@@ -1,5 +1,5 @@
 # Garta
-Garta is a GPX viewer, analyzer and editor for GNOME 3 desktop environment.
+Garta is going to be a GPX viewer, analyzer and editor for GNOME 3 desktop environment and written in Rust programming language. The application is still at early development stage and won't be that useful before release 0.1.0.
 
 * [Change Log](ChangeLog.md)
 * [Road Map](RoadMap.md)
@@ -21,7 +21,7 @@ cd garta
 The standard cargo commands can be used to run the unit tests, run the application or even build a release.
 
 ```bash
-export RUST_LOG=warn,garta=debug
+export RUST_LOG=warn,garta::core=debug,garta::gui=debug
 cargo test
 cargo run
 cargo build --release
