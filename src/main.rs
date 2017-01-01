@@ -36,7 +36,6 @@ use core::settings::{settings_write};
 use core::tiles::{create_tile_cache};
 use core::root::{Atlas, Layer, MapView};
 use core::map::{Map};
-use core::id::{UniqueId};
 use core::persistence::*;
 
 fn main() {
@@ -63,12 +62,11 @@ fn main() {
     match deserialize_all("map", |map: Map| {
         let mut a = atlas.borrow_mut();
         debug!("Loaded map {}", map.name);
-        a.maps.insert(map.id(), map);
+        a.maps.insert(map.slug.clone(), map);
     }) {
         Ok(()) => { }
         Err(e) => { warn!("Failed to load map: {}", e); }
     }
-    let m2id: UniqueId = 2; // FIXME
 
     // Hard-coded sample layers
     {    
@@ -81,7 +79,7 @@ fn main() {
 
     // Open GUI
     let map_view = Rc::new(RefCell::new(MapView::new()));
-    map_view.borrow_mut().map_id = m2id;
+    map_view.borrow_mut().map_slug = "osm-carto".into();
     let main_window = Rc::new(RefCell::new(gui::MapWindow::new(atlas, map_view, tcache.clone())));
     tcache.borrow_mut().observer = Some(main_window.clone());
     match main_window.borrow_mut().init() {

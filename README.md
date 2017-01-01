@@ -9,7 +9,7 @@ The following tools are needed to download and compile the application:
 
 * git 
 * cargo
-* rustc **version 1.15** (*nightly* channel until Feb 2017)
+* rustc **v1.15** (*nightly* channel until Feb 2017)
 
 At first, you have to clone this repository.
 

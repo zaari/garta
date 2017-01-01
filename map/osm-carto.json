@@ -1,5 +1,5 @@
 {
-  "id": 1,
+  "slug": "osm-carto",
   "name": "OSM Carto",
   "transparent": false,
   "urls": [
@@ -7,6 +7,8 @@
     "http://b.tile.openstreetmap.org/${z}/${x}/${y}.png",
     "http://c.tile.openstreetmap.org/${z}/${x}/${y}.png"
   ],
-  "token": ""
+  "token": "",
+  "copyright_text": "© OpenStreetMap contributors",
+  "copyright_url": "https://www.openstreetmap.org/copyright"
 }
 

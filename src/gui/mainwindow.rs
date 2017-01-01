@@ -26,7 +26,7 @@ use self::gtk::prelude::*;
 use self::glib::variant::{FromVariant};
 use geocoord::geo::{Location};
 use core::root::{Atlas, MapView};
-use core::id::{UniqueId, NONE};
+use core::id::{UniqueId};
 use core::tiles::{TileCache, TileObserver, TileRequest};
 use gui::mapcanvas::{build_map_canvas};
 //use core::settings::{settings_read, settings_write};
@@ -182,30 +182,29 @@ impl MapWindow {
                 let menu_model = gio::Menu::new();
                 
                 // Get backdrop map id
-                let backdrop_map_id = {
+                let backdrop_map_slug = {
                     let view = self.map_view.borrow_mut();
-                    view.map_id
+                    view.map_slug.clone()
                 };
 
                 // Simple Action for map menu button
                 let action = gio::SimpleAction::new_stateful(
                                 "choose_map", 
                                 Some(&glib::VariantType::new("s").unwrap()),
-                                &backdrop_map_id.to_string().to_variant()
+                                &backdrop_map_slug.to_string().to_variant()
                                 );
                 let map_win = RefCell::new(self.clone());
-                action.connect_activate( move |action, map_id_variant| {
-                    if let Some(ref var) = *map_id_variant {
-                        if let Some(map_id_str) = var.get_str() {
-                            let map_id = map_id_str.parse::<UniqueId>().unwrap();
-                            debug!("choose_map action invoked {}!", map_id);
+                action.connect_activate( move |action, map_slug_variant| {
+                    if let Some(ref var) = *map_slug_variant {
+                        if let Some(map_slug) = var.get_str() {
+                            debug!("choose_map action invoked {}!", map_slug);
                             action.set_state(var);
                             
                             // Change map id on the view
                             let mut win = map_win.borrow_mut();
                             {
                                 let mut view = win.map_view.borrow_mut();
-                                view.map_id = map_id;
+                                view.map_slug = map_slug.to_string();
                             }
                             
                             // Refresh the map element and the button
@@ -222,7 +221,7 @@ impl MapWindow {
                     if !map.transparent {
                         let item = gio::MenuItem::new(
                             Some(map.name.as_str()), 
-                            Some(format!("win.choose_map('{}')", map.id()).as_str()));
+                            Some(format!("win.choose_map('{}')", map.slug).as_str()));
                         menu_model.append_item(&item);
                     }
                 }
@@ -387,9 +386,9 @@ impl MapWindow {
             let backdrop_map_name = {
                 let atlas = self.atlas.borrow();
                 let view = self.map_view.borrow();
-                debug!("update_maps_button {}", view.map_id);
-                if view.map_id != NONE {
-                    let map = atlas.maps.get(&view.map_id).unwrap();
+                debug!("update_maps_button {}", view.map_slug);
+                if !view.map_slug.is_empty() {
+                    let map = atlas.maps.get(&view.map_slug).unwrap();
                     map.name.clone()
                 } else {
                     "Maps".into()

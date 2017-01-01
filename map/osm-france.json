@@ -1,5 +1,5 @@
 {
-  "id": 2,
+  "slug": "osm-france",
   "name": "OSM France",
   "transparent": false,
   "urls": [
@@ -7,6 +7,8 @@
     "http://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
     "http://c.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png"
   ],
-  "token": ""
+  "token": "",
+  "copyright_text": "© OpenStreetMap contributors",
+  "copyright_url": "https://www.openstreetmap.org/copyright"
 }
 

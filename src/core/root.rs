@@ -21,7 +21,7 @@ use std::cmp::*;
 use geocoord::geo::{Location, GeoBox};
 use core::elements::*;
 use core::map::{Map};
-use core::id::{UniqueId, NONE};
+use core::id::{UniqueId};
 
 // ---- Atlas --------------------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ pub struct Atlas {
     pub areas: HashMap<UniqueId, Area>,
     
     /// Collection of maps.
-    pub maps: BTreeMap<UniqueId, Map>,
+    pub maps: BTreeMap<String, Map>,
 }
 
 impl Atlas {
@@ -104,10 +104,10 @@ impl Atlas {
     }
     
     /// Set map name value and ensure that the BTree is valid after the change.
-    pub fn set_map_name(&mut self, map_id: UniqueId, name: String) {
-        if let Some(mut map) = self.maps.remove(&map_id) {
+    pub fn set_map_name(&mut self, map_slug: String, name: String) {
+        if let Some(mut map) = self.maps.remove(&map_slug) {
             map.name = name;
-            self.maps.insert(map_id, map);
+            self.maps.insert(map_slug, map);
         }
     }
 }
@@ -143,9 +143,9 @@ pub struct Layer {
     /// Backdrop layer is expected to be zero.
     pub order: u16,
     
-    /// In case of transparent map layers this is set to Some, otherwise None.
+    /// In case of transparent map layers this is set to some, otherwise empty.
     /// Notice that the backdrop map layer is defined in MapView.
-    pub map_id: UniqueId,
+    pub map_slug: String,
 
     /// Map elements on the layer.
     pub element_ids: BTreeSet<UniqueId>,
@@ -158,7 +158,7 @@ impl Layer {
             id: super::id::next_id(),
             name: name,
             order: order,
-            map_id: NONE,
+            map_slug: "".into(),
             element_ids: BTreeSet::new(),
         }    
     }
@@ -206,8 +206,8 @@ pub struct MapView {
     /// Visible layer ids.
     pub visible_layer_ids: LinkedList<UniqueId>,
     
-    /// Backdrop layer map id.
-    pub map_id: UniqueId,
+    /// Backdrop layer map slug.
+    pub map_slug: String,
     
     /// Coordinates format used within the view.
     pub coordinates_format: String,
@@ -219,7 +219,7 @@ impl MapView {
             bounding_box: GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)),
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
-            map_id: NONE,
+            map_slug: "".into(),
             coordinates_format: "dm".into(),
         }
     }
@@ -231,7 +231,7 @@ impl Clone for MapView {
             bounding_box: self.bounding_box,
             zoom_level: self.zoom_level.clone(),
             visible_layer_ids: self.visible_layer_ids.clone(),
-            map_id: self.map_id,
+            map_slug: self.map_slug.clone(),
             coordinates_format: self.coordinates_format.clone(),
         }
     }
