@@ -32,6 +32,9 @@ use geocoord::geo::{GeoBox, Location};
 // Based on my novice question on StackOverflow; http://stackoverflow.com/questions/40963710/extended-traits-in-collections
 
 pub trait MapElement {
+    /// Returns the unique id of the element
+    fn id(&self) -> UniqueId;
+    
     /// Returns bounding box of the element.
     fn bounding_box(&self) -> GeoBox;
 }
@@ -74,12 +77,12 @@ impl Attraction {
             location: loc,
         }
     }
-
-    /// Id getter.    
-    pub fn id(&self) -> UniqueId { self.id }
 }
 
 impl MapElement for Attraction {
+    /// Id getter.    
+    fn id(&self) -> UniqueId { self.id }
+    
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(self.location, self.location)
     }
@@ -122,15 +125,16 @@ impl Waypoint {
             location: loc,
         }
     }
-
-    /// Id getter.    
-    pub fn id(&self) -> UniqueId { self.id }
 }
 
 impl MapElement for Waypoint {
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(self.location, self.location)
     }
+    
+    /// Id getter.    
+    fn id(&self) -> UniqueId { self.id }
+    
 }
 
 // ---- Path ---------------------------------------------------------------------------------------
@@ -192,14 +196,30 @@ impl MapElement for Path {
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)) // TODO
     }
+    
+    /// Id getter.    
+    fn id(&self) -> UniqueId { self.id }
+    
 }
 
 // ---- Area ---------------------------------------------------------------------------------------
 
 pub struct Area {
+    id: UniqueId,
+}
+
+impl Area {
+    pub fn new(slug: String) -> Area {
+        Area{
+            id: super::id::next_id(),
+        }    
+    }
 }
 
 impl MapElement for Area {
+    /// Id getter.    
+    fn id(&self) -> UniqueId { self.id }
+    
     fn bounding_box(&self) -> GeoBox {
         GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)) // TODO
     }

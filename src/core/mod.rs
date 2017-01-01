@@ -20,4 +20,4 @@ pub mod map;
 pub mod tiles;
 pub mod settings;
 pub mod elements;
-
+pub mod persistence;

@@ -65,7 +65,7 @@ extern crate cairo;
 extern crate glib;
 extern crate gdk;
 extern crate gdk_pixbuf;
-extern crate time;
+extern crate chrono;
 extern crate rand;
 extern crate hyper;
 extern crate image;
@@ -167,7 +167,7 @@ impl TileCache {
             }
 
             // Update access time
-            self.tiles.get_mut(&tile_key).unwrap().access_time = time::now();
+            self.tiles.get_mut(&tile_key).unwrap().access_time = chrono::UTC::now();
             
             // Return
             Some(self.tiles.get_mut(&tile_key).unwrap())
@@ -177,20 +177,24 @@ impl TileCache {
             let mut tile = Tile::with_request(treq);
             
             // Approximate content
-            let mut treq_up = treq.zoom_out();
-            let mut n = 2;
-            while treq_up.z >= 1 {
-                let tile_key_up = treq.to_key();
-                if self.tiles.contains_key(&tile_key_up) {
-                    tile = self.tiles.get(&tile_key).unwrap().zoom_in(&treq);
-                    break;
+            if treq.z > 0 {
+                let mut treq_up = treq.zoom_out();
+                let mut n = 2;
+                while treq_up.z >= 1 {
+                    let tile_key_up = treq.to_key();
+                    if self.tiles.contains_key(&tile_key_up) {
+                        tile = self.tiles.get(&tile_key).unwrap().zoom_in(&treq);
+                        break;
+                    }
+                    treq_up = treq_up.zoom_out();
+                    n *= 2;
                 }
-                treq_up = treq_up.zoom_out();
-                n *= 2;
-            }
-            
-            // Create a black tile
-            if treq_up.z == 0 {
+                
+                // Create a black tile
+                if treq_up.z == 0 {
+                    tile = Tile::new(&treq, 0.0, 0.0, 0.0);
+                }
+            } else {
                 tile = Tile::new(&treq, 0.0, 0.0, 0.0);
             }
             
@@ -206,6 +210,8 @@ impl TileCache {
             // Assign tile data
             tile.data = Some(treq_result.data.clone());
             tile.state = TileState::Ready;
+            tile.width = treq_result.tile_width;
+            tile.height = treq_result.tile_height;
         } else {
             warn!("Received image data fetch for tile {} but tile isn't in cache!", treq_result.to_key());
         }
@@ -263,10 +269,10 @@ pub struct Tile {
     height: i32,
     
     /// Time when this tile was needed.
-    pub access_time: time::Tm,
+    pub access_time: chrono::DateTime<chrono::UTC>,
     
     /// Time when this tile expires.
-    pub expire_time: time::Tm,
+    pub expire_time: chrono::DateTime<chrono::UTC>,
     
     /// Tile data as a byte array.
     data: Option<Box<[u8]>>,
@@ -284,9 +290,9 @@ impl Tile {
     pub fn with_request(treq: &TileRequest) -> Tile {
         Tile{ state: TileState::Pending, 
               x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
-              width: treq.source.tile_width, height: treq.source.tile_height,
-              access_time: time::now(),
-              expire_time: time::now(), // TODO: future
+              width: 256, height: 256,
+              access_time: chrono::UTC::now(),
+              expire_time: chrono::UTC::now(), // TODO: future
               data: None,
               surface: None,
               surface_none: None,
@@ -297,7 +303,7 @@ impl Tile {
     /// Constructor a black tile for TileRequest.
     fn new(treq: &TileRequest, r: f64, g: f64, b: f64) -> Tile {
         // Create black isurface
-        let isurface = ImageSurface::create(Format::ARgb32, treq.source.tile_width, treq.source.tile_width);
+        let isurface = ImageSurface::create(Format::ARgb32, 256, 256);
         let c = cairo::Context::new(&isurface);
         c.set_source_rgb(r, g, b);
         c.paint();
@@ -305,9 +311,9 @@ impl Tile {
         // Return tile        
         Tile{ state: TileState::Pending, 
               x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
-              width: treq.source.tile_width, height: treq.source.tile_height,
-              access_time: time::now(),
-              expire_time: time::now(), // TODO: future
+              width: 256, height: 256,
+              access_time: chrono::UTC::now(),
+              expire_time: chrono::UTC::now(), // TODO: future
               data: None,
               surface: None,
               surface_none: None,
@@ -320,6 +326,8 @@ impl Tile {
     pub fn y(&self) -> u32 { self.y }
     pub fn z(&self) -> u8 { self.z }
     pub fn mult(&self) -> u8 { self.mult }
+    pub fn width(&self) -> i32 { self.width }
+    pub fn height(&self) -> i32 { self.height }
     
     /// Return image surface. May involve an in-memory data conversion.
     pub fn get_surface(&mut self) -> Option<&ImageSurface> {
@@ -340,11 +348,11 @@ impl Tile {
     fn zoom_in(&self, treq: &TileRequest) -> Tile {
         // Math
         let q2 = 1 << (self.z - treq.z) as i32;
-        let offset_x = -treq.source.tile_width * (treq.x as i32 % q2);
-        let offset_y = -treq.source.tile_height * (treq.y as i32 % q2);
+        let offset_x = -self.width * (treq.x as i32 % q2);
+        let offset_y = -self.height * (treq.y as i32 % q2);
 
         // Create a new
-        let isurface = ImageSurface::create(Format::ARgb32, treq.source.tile_width, treq.source.tile_width);
+        let isurface = ImageSurface::create(Format::ARgb32, self.width, self.height);
         let c = cairo::Context::new(&isurface);
         c.scale(q2 as f64, q2 as f64);
         if let Some(ref self_surface) = self.surface {
@@ -361,9 +369,9 @@ impl Tile {
         Tile {
             state: TileState::Pending, 
             x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
-            width: treq.source.tile_width, height: treq.source.tile_height,
-            access_time: time::now(),
-            expire_time: time::now(), // TODO: future
+            width: self.width, height: self.height,
+            access_time: chrono::UTC::now(),
+            expire_time: chrono::UTC::now(), // TODO: future
             data: None,
             surface: Some(isurface),
             surface_none: None,
@@ -497,6 +505,12 @@ struct TileRequestResult {
     /// Image raw bitmap data
     pub data: Box<[u8]>,
     
+    /// Tile width in pixels.
+    pub tile_width: i32,
+    
+    /// Tile height in pixels.
+    pub tile_height: i32,
+    
     /// Error message
     pub error: String,
 }
@@ -504,11 +518,15 @@ struct TileRequestResult {
 impl TileRequestResult {
     /// Non-error constructor.
     fn new(treq: &TileRequest, img_data: &mut Vec<u8>) -> TileRequestResult {
-        match convert_image_to_buffer(img_data) {
+        let mut tile_width: i32 = 0;
+        let mut tile_height: i32 = 0;
+        match convert_image_to_buffer(img_data, &mut tile_width, &mut tile_height) {
             Ok(raw_data) => {
                 TileRequestResult {
                     request: treq.clone(),
                     data: raw_data,
+                    tile_width: tile_width,
+                    tile_height: tile_height,
                     error: "".into(),
                 }
             },
@@ -516,6 +534,8 @@ impl TileRequestResult {
                 TileRequestResult {
                     request: treq.clone(),
                     data: Box::new([0u8]),
+                    tile_width: 0,
+                    tile_height: 0,
                     error: e.to_string(),
                 }
             }
@@ -527,6 +547,8 @@ impl TileRequestResult {
         TileRequestResult {
             request: treq.clone(),
             data: Box::new([0u8]),
+            tile_width: 0,
+            tile_height: 0,
             error: err,
         }
     }
@@ -715,9 +737,6 @@ pub struct TileSource {
     // A unique name of the tile source.
     pub name: String,
 
-    // Tile dimensions
-    pub tile_width: i32, pub tile_height: i32,
-
     /// An array of mutually optional urls
     pub urls: Vec<String>,
     
@@ -730,7 +749,6 @@ impl TileSource {
         TileSource {
             slug: "unnamed".into(),
             name: "Unnamed".into(),
-            tile_width: 256, tile_height: 256,
             urls: Vec::new(),
             token: "".into(),
         }
@@ -818,17 +836,21 @@ fn cairo_format_stride_for_width(format: Format, width: i32) -> i32 {
     stride
 }
 
-/// Convert image file data (PNG/JPEG/GIF/etc) to a raw bitmap data
-fn convert_image_to_buffer(img_data: &mut Vec<u8>) -> Result<Box<[u8]>, String> {
+/// Convert image file data (PNG/JPEG/GIF/etc) to a raw bitmap data.
+/// Returns a tuple of (data, width, height).
+fn convert_image_to_buffer(img_data: &mut Vec<u8>, width_out: &mut i32, height_out: &mut i32) -> Result<Box<[u8]>, String> {
     match image::load_from_memory(img_data.as_ref()) {
         Ok(dynamic_image) => {
             // Convert to a byte buffer
-            let mut bu8 = dynamic_image.to_rgba().into_raw().into_boxed_slice();
+            let rgba_image = dynamic_image.to_rgba();
+            *width_out = rgba_image.width() as i32;
+            *height_out = rgba_image.height() as i32;
+            let mut bu8 = rgba_image.into_raw().into_boxed_slice();
             
             // Reorder bytes
             for i in 0..bu8.len() { // TODO: in the future .step_by(4)
                 if i % 4 == 0 {
-                    bu8.swap(i + 0, i + 2); // BGRA/RGBA
+                    bu8.swap(i + 0, i + 2); // RGBA -> BGRA (Cairo expects this; ARGB32 in big-endian)
                 }
             }
             

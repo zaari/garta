@@ -5,15 +5,13 @@ Here is the development roadmap. This is subject to change depending on the phas
 - status bar of the main window is feature complete
 - map implemented with scrolling and zooming support
 - slippy maps can be defined with json files
-- domain model persistence
-- settings persistence
-- non-floating dependency version requirements
 
 ## Version 0.2
 - GPX loading
 - track rendering and statistics
-- layers
 - transparent map layers
+- layers dialog
+- persistence
 
 ## Version 0.3
 - track editing
@@ -22,27 +20,28 @@ Here is the development roadmap. This is subject to change depending on the phas
 - GPX saving
 
 ## Version 0.4
-- vehicle types
-- track replay
+- internationalization (contributors needed)
 
 ## Version 0.5
 - attractions
 - drag & drop
 
 ## Version 0.6
-- find and other possible meta queries
-- settings dialog
+- smooth zooming
+- scrolling inertia
+- maps dialog
 
 ## Version 0.7
-- internationalization (contributions needed)
+- vehicle types
+- track replay
+
+## Version 0.8
+- find by name and other possible meta queries
+- settings dialog
+- settings persistence
 
 ## Version 1.0
 - stable file formats and directory structure
 - improved error handling 
 
-## Version 1.1
-- KMZ importing and exporting
-
-## Version 1.2
-- remote layers
 

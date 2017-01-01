@@ -17,6 +17,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+#![feature(proc_macro)]
+#[macro_use] extern crate serde_derive;
+
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 extern crate env_logger;
@@ -32,7 +35,9 @@ use std::process::{exit};
 use core::settings::{settings_write};
 use core::tiles::{create_tile_cache};
 use core::root::{Atlas, Layer, MapView};
-use core::map::Map;
+use core::map::{Map};
+use core::id::{UniqueId};
+use core::persistence::*;
 
 fn main() {
     // Initialize logger
@@ -51,19 +56,28 @@ fn main() {
     let tcache = create_tile_cache();
     tcache.borrow_mut().init();
 
-    // Generated model for testing
+    // Create atlas
     let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
-    let m2id = {
-        let mut p = atlas.borrow_mut();
-        let m1 = Map::new("Map 1".into()); p.maps.insert(m1.id(), m1);
-        let m2 = Map::new("Map 2".into()); let m2id = m2.id(); p.maps.insert(m2.id(), m2);
-        let m3 = Map::new("Map 3".into()); p.maps.insert(m3.id(), m3);
-        let l0 = Layer::new("Backdrop".into(), 0); p.layers.insert(l0.id(), l0);
-        let l1 = Layer::new("Layer 1".into(), 1); p.layers.insert(l1.id(), l1);
-        let l2 = Layer::new("Layer 2".into(), 2); p.layers.insert(l2.id(), l2);
-        let l3 = Layer::new("Layer 3".into(), 3); p.layers.insert(l3.id(), l3);
-        m2id
-    };
+    
+    // Load maps from JSON files
+    match deserialize_all("map", |map: Map| {
+        let mut a = atlas.borrow_mut();
+        debug!("Loaded map {}", map.name);
+        a.maps.insert(map.id(), map);
+    }) {
+        Ok(()) => { }
+        Err(e) => { warn!("Failed to load map: {}", e); }
+    }
+    let m2id: UniqueId = 2; // FIXME
+
+    // Hard-coded sample layers
+    {    
+        let mut a = atlas.borrow_mut();
+        let l0 = Layer::new("Backdrop".into(), 0); a.layers.insert(l0.id(), l0);
+        let l1 = Layer::new("Layer 1".into(), 1); a.layers.insert(l1.id(), l1);
+        let l2 = Layer::new("Layer 2".into(), 2); a.layers.insert(l2.id(), l2);
+        let l3 = Layer::new("Layer 3".into(), 3); a.layers.insert(l3.id(), l3);
+    }
 
     // Open GUI
     let map_view = Rc::new(RefCell::new(MapView::new()));

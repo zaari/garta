@@ -9,7 +9,7 @@ The following tools are needed to download and compile the application:
 
 * git 
 * cargo
-* rustc
+* rustc **version 1.15** (*nightly* channel until Feb 2017)
 
 At first, you have to clone this repository.
 
@@ -21,7 +21,7 @@ cd garta
 The standard cargo commands can be used to run the unit tests, run the application or even build a release.
 
 ```bash
-export RUST_LOG=warn,garta::core=debug,garta::gui=debug
+export RUST_LOG=warn,garta=debug,garta::geocoord::gpx=warn
 cargo test
 cargo run
 cargo build --release

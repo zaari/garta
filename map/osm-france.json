@@ -1,0 +1,12 @@
+{
+  "id": 2,
+  "name": "OSM France",
+  "transparent": false,
+  "urls": [
+    "http://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    "http://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    "http://c.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png"
+  ],
+  "token": ""
+}
+

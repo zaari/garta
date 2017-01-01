@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate time;
+extern crate chrono;
 extern crate xml;
 
 //use std::fs::File;
@@ -22,7 +22,6 @@ use std::io::{Read};
 //use std::result;
 use std::option::{Option};
 use std::collections::linked_list::LinkedList;
-use self::time::{strptime};
 
 use super::model::*;
 use super::super::geo::Location;
@@ -118,35 +117,11 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                 } else if en == "time" {
                     match find_waypoint(&mut col, &mut en_stack) {
                         Ok(wpt) => {
-                            match strptime(elem_characters.as_str(), GPX_TIME_FORMAT) {
+                            match elem_characters.as_str().parse::<chrono::DateTime<chrono::UTC>>() {
                                 Ok(t) => { wpt.time = Some(t); }
                                 Err(e) => { wpt.time = None; }
                             }
-                            if wpt.time.is_some() {
-                                match strptime(elem_characters.as_str(), GPX_TIME_FORMAT_WITH_TIMEZONE) {
-                                Ok(t) => { wpt.time = Some(t); }
-                                Err(e) => { wpt.time = None; }
-                                }
-                            }
-                            if wpt.time.is_some() {
-                                match strptime(elem_characters.as_str(), GPX_TIME_FORMAT_COMPACT) {
-                                Ok(t) => { wpt.time = Some(t); }
-                                Err(e) => { wpt.time = None; }
-                                }
-                            }
-                            if wpt.time.is_some() {
-                                match strptime(elem_characters.as_str(), GPX_TIME_FORMAT_COMPACT_WITHOUT_FRACTIONS) {
-                                Ok(t) => { wpt.time = Some(t); }
-                                Err(e) => { wpt.time = None; }
-                                }
-                            }
-                            if wpt.time.is_some() {
-                                match strptime(elem_characters.as_str(), GPX_TIME_FORMAT_WITHOUT_FRACTIONS) {
-                                Ok(t) => { wpt.time = Some(t); }
-                                Err(e) => { wpt.time = None; }
-                                }
-                            }
-                            if wpt.time.is_some() {
+                            if !wpt.time.is_some() {
                                 debug!("Bad GPX time: {}", elem_characters);
                             }
                         }

@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "name": "OSM Carto",
+  "transparent": false,
+  "urls": [
+    "http://a.tile.openstreetmap.org/${z}/${x}/${y}.png",
+    "http://b.tile.openstreetmap.org/${z}/${x}/${y}.png",
+    "http://c.tile.openstreetmap.org/${z}/${x}/${y}.png"
+  ],
+  "token": ""
+}
+

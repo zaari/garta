@@ -81,25 +81,28 @@ fn draw(widget: &gtk::DrawingArea, c: &cairo::Context, map_win_rr: Rc<RefCell<Ma
     tile_source.urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
     tile_source.urls.push("http://c.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
 
-    // Tile dimensions
-    let tw = tile_source.tile_width;
-    let th = tile_source.tile_height;
-
     // Tile cache    
     let tcache_rr = map_win_rr.borrow().tile_cache.clone();
     let mut tcache = tcache_rr.borrow_mut();
-    let treq = TileRequest::new(1, 1, 0, 0, 1, 1, tile_source);
+    
+    // Request tile
+    let treq = TileRequest::new(1, 1, 0, 0, 0, 1, tile_source);
     if let Some(tile) = tcache.get_tile(&treq) {
         tile.get_surface();
+        
+        // Tile dimensions
+        let tw = tile.width();
+        let th = tile.height();
 
         // Draw tile
         if let Some(ref tile_surface) = tile.get_surface() {
+
             c.set_source_surface(tile_surface, ((width - tw) / 2) as f64, ((height - th) / 2) as f64);
             c.paint();
         }
     }
     
-    if log_enabled!(Debug) { debug!("draw time: {} ms width={}", duration_to_millisconds(&start_time.elapsed()), width); }
+    if log_enabled!(Debug) { debug!("draw time: {:.3} ms width={}", 1000.0 * duration_to_seconds(&start_time.elapsed()), width); }
 }
 
 /// Event handler for mouse button press. Either start dragging a map element or scrolling the map.
@@ -133,10 +136,10 @@ fn motion_notify_event(widget: &gtk::DrawingArea, ev: &gdk::EventMotion, map_win
 }
 
 /// Convert duration to milliseconds
-fn duration_to_millisconds(i: &Duration) -> u64 {
+fn duration_to_seconds(i: &Duration) -> f64 {
     let secs = i.as_secs() as f64;
     let nsecs = i.subsec_nanos() as f64;
-    ((secs + 0.000000001 * nsecs) * 1000.0 + 0.5) as u64
+    (secs + 0.000000001 * nsecs)
 }
 
 

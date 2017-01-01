@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate time;
+extern crate chrono;
 
 use std::option::{Option};
 use std::collections::linked_list::LinkedList;
-use self::time::{Tm};
 use std::fmt;
 
 use super::super::geo::Location;
@@ -61,7 +60,7 @@ pub struct Metadata {
 pub struct Point {
     pub location: Location,
     pub elev: Option<f64>, 
-    pub time: Option<Tm>,
+    pub time: Option<chrono::DateTime<chrono::UTC>>,
     pub magvar: Option<f64>,
     pub geoidheight: Option<f64>,
     pub name: Option<String>,
