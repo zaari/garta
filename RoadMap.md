@@ -1,19 +1,20 @@
 # Roadmap
-Here is the development roadmap. This is subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state.
+This is the development roadmap of Garta application. It's subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state.
 
 ## Version 0.1
 - status bar of the main window has maps, layers, coordinates and zoom level widgets completed
 - map implemented with basic scrolling and zooming support
-- maps have required copyright information and related clickable urls visible
+- maps have the required copyright information and the related clickable urls visible
 - slippy maps can be defined in json files
 - tile cache
+- view-related data persistence 
 
 ## Version 0.2
 - GPX loading
 - track rendering and statistics
 - transparent map layers
 - layers dialog
-- persistence
+- full data persistence
 - coordinates module moved to a separate repository and also published at crates.io
 
 ## Version 0.3
