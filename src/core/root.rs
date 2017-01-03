@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,6 +13,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+extern crate serde_json;
 
 use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
@@ -132,6 +134,7 @@ impl AtlasLoadSaveStatus {
 // ---- Layer --------------------------------------------------------------------------------------
 
 /// Layer in a atlas containing map elements.
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Layer {
     /// Unique id.
     id: UniqueId,
@@ -145,10 +148,28 @@ pub struct Layer {
     
     /// In case of transparent map layers this is set to some, otherwise empty.
     /// Notice that the backdrop map layer is defined in MapView.
+    #[serde(default)]
     pub map_slug: String,
 
     /// Map elements on the layer.
+    #[serde(skip_serializing_if = "BTreeSet::is_empty")]
+    #[serde(default)]
     pub element_ids: BTreeSet<UniqueId>,
+
+    /// Remote layer uri.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
+    pub remote_uri: String,
+    
+    /// Maps remote ids to local ones.
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    pub remote_to_local_ids: BTreeMap<UniqueId, UniqueId>,
+    
+    /// Maps local ids to remote ones.
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    pub local_to_remote_ids: BTreeMap<UniqueId, UniqueId>,
 }
 
 impl Layer {
@@ -160,6 +181,9 @@ impl Layer {
             order: order,
             map_slug: "".into(),
             element_ids: BTreeSet::new(),
+            remote_uri: "".into(),
+            remote_to_local_ids: BTreeMap::new(),
+            local_to_remote_ids: BTreeMap::new(),
         }    
     }
 
@@ -169,6 +193,11 @@ impl Layer {
     /// Returns true if this is a backdrop layer (order = 0).
     pub fn backdrop(&self) -> bool {
         (self.order == 0)
+    }
+    
+    /// True if this is a remote layer.
+    pub fn is_remote(&self) -> bool {
+        !self.remote_uri.is_empty()
     }
 }
 
@@ -191,7 +220,6 @@ impl PartialEq for Layer {
 }
 
 impl Eq for Layer {}
-
 
 // ---- MapView ------------------------------------------------------------------------------------
 

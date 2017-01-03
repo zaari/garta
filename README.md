@@ -18,10 +18,15 @@ git clone https://github.com/zaari/garta
 cd garta
 ```
 
+If you want to get some debug from garta internals, you can configure the env_logger. The following enables warnings in any Rust module and debug in any Garta module, but then allows only warning level messages from certain verbosely logging parts.
+
+```bash
+export RUST_LOG=warn,garta=debug,garta::geocoord::gpx=warn,garta::core::tiles=warn,garta::gui::mapcanvas=warn
+```
+
 The standard cargo commands can be used to run the unit tests, run the application or even build a release.
 
 ```bash
-export RUST_LOG=warn,garta=debug,garta::geocoord::gpx=warn
 cargo test
 cargo run
 cargo build --release

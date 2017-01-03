@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

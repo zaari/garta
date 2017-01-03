@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -444,7 +444,7 @@ impl MapWindow {
 
 impl TileObserver for MapWindow {
     fn tile_loaded(&self, treq: &TileRequest) {
-        debug!("tile_loaded: {:?}", treq);
+        //debug!("tile_loaded: {:?}", treq);
         if let Some(ref mapcanvas) = self.mapcanvas {
             mapcanvas.queue_draw(); // TODO: only partial redraw
         }

@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,12 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-extern crate xml;
-
 use std::cell::{RefCell};
 use std::rc::{Rc};
-//use std::option::{Option};
-//use std::cmp::*;
 
 use core::root::*;
 use core::id::*;
@@ -37,6 +33,9 @@ pub trait MapElement {
     
     /// Returns bounding box of the element.
     fn bounding_box(&self) -> GeoBox;
+
+    /// True if this an element from a remote layer.
+    fn is_remote(&self) -> bool { false }
 }
 
 /*
@@ -63,7 +62,7 @@ impl Eq for MapElement {}
 
 // ---- Attraction ---------------------------------------------------------------------------------
 
-/// A simple point-like destination on the map.
+/// A simple point-like destination on the map, also known as a landmark.
 pub struct Attraction { 
     id: UniqueId,
     pub location: Location,

@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- Persistence module implemented
+- Tile cache
+- Persistence module
 - Map loading from JSON files
 
 ## [0.0.4] - 2016-12-29

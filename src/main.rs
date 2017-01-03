@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ use std::cell::{RefCell};
 use std::rc::{Rc};
 use std::process::{exit};
 
-use core::settings::{settings_write};
+use core::settings::{settings_write, settings_read};
 use core::tiles::{create_tile_cache};
 use core::root::{Atlas, Layer, MapView};
 use core::map::{Map};
@@ -41,34 +41,37 @@ use core::persistence::*;
 fn main() {
     // Initialize logger
     env_logger::init().unwrap();
-    debug!("Garta started");
+    info!("Garta started");
     
     // Load settings
-    debug!("Loading settings");
+    info!("Loading settings");
     if let Err(e) = settings_write().load() {
         error!("Failed to load settings: {}", e);
         exit(1);
     }
     
-    // Start the threads
-    debug!("Starting worker threads");
+    // Initialize tile cache
+    info!("Initialize tile cache");
     let tcache = create_tile_cache();
-    tcache.borrow_mut().init();
 
     // Create atlas
     let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
     
     // Load maps from JSON files
-    match deserialize_all("map", |map: Map| {
-        let mut a = atlas.borrow_mut();
-        debug!("Loaded map {}", map.name);
-        a.maps.insert(map.slug.clone(), map);
-    }) {
-        Ok(()) => { }
-        Err(e) => { warn!("Failed to load map: {}", e); }
+    info!("Loading map files");
+    for dir_name in vec![settings_read().host_maps_directory(), settings_read().user_maps_directory()] {
+        match deserialize_all(dir_name, |map: Map, file_stem: &String| {
+            let mut a = atlas.borrow_mut();
+            debug!("Loaded map {} ({})", map.name, file_stem);
+            a.maps.insert(map.slug.clone(), map);
+        }) {
+            Ok(()) => { }
+            Err(e) => { warn!("Failed to load map: {}", e); }
+        }
     }
 
     // Hard-coded sample layers
+    debug!("Creating sample layers");
     {    
         let mut a = atlas.borrow_mut();
         let l0 = Layer::new("Backdrop".into(), 0); a.layers.insert(l0.id(), l0);
@@ -78,6 +81,7 @@ fn main() {
     }
 
     // Open GUI
+    info!("Showing the main window");
     let map_view = Rc::new(RefCell::new(MapView::new()));
     map_view.borrow_mut().map_slug = "osm-carto".into();
     let main_window = Rc::new(RefCell::new(gui::MapWindow::new(atlas, map_view, tcache.clone())));
@@ -88,6 +92,11 @@ fn main() {
     }
 
     // Main loop
+    info!("Starting the main loop");
     gui::main();
+    
+    // Cleanup
+    tcache.borrow_mut().store();
+    info!("Exit");
 }
 

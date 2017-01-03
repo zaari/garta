@@ -1,27 +1,29 @@
 [package]
 name = "garta"
-description = "Garta is going to be a GPX viewer, analyzer and editor for GNOME 3 desktop environment"
+description = "Garta is going to be a GPX viewer, analyzer and editor for GTK3"
 version = "0.0.4"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [build-dependencies]
-serde_codegen = "^0.8"
+serde_codegen = "0.8"
 
 [dependencies]
 regex       = "0.1" # "0.2"
-chrono      = "*" # "0.2"
-rand        = "*" # "^0.3.15"
-hyper       = "*" # "^0.9.14"
-image       = "*" # "^0.10.4"
-num_cpus    = "*" # "^1.2.0"
-xml-rs      = "*" # "^0.3.5"
-lazy_static = "*" # "^0.2.2"
-log         = "*" # "^0.3.6"
-env_logger  = "*" # "^0.3.5"
+chrono      = "0.2"
+rand        = "0.3"
+hyper       = "0.9"
+image       = "0.10"
+num_cpus    = "1.2"
+xml-rs      = "0.3"
+lazy_static = "0.2"
+log         = "0.3"
+env_logger  = "0.3"
+assert      = "0.7"
+#gettext-rs  = "*"
 
-serde       = "*" # "^0.8.21"
-serde_derive= "*" # "^0.8.21"
-serde_json  = "*" # "^0.8.4"
+serde       = "0.8"
+serde_derive= "0.8"
+serde_json  = "0.8"
 
 glib        = "*" # "^0.1.1"
 gdk         = "*" # "^0.5.1"

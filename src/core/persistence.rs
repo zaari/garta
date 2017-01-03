@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ use std::fmt;
 pub fn deserialize_all<P, T, F>(dir: P, handle_element: F) -> Result<(), io::Error>
     where P: AsRef<path::Path>,
           T: serde::Deserialize,
-          F: Fn(T),
+          F: Fn(T, &String),
 {
     if dir.as_ref().is_dir() {
         for entry_ in fs::read_dir(dir)? {
@@ -37,15 +37,24 @@ pub fn deserialize_all<P, T, F>(dir: P, handle_element: F) -> Result<(), io::Err
                 let pathbuf = entry.path();
                 let filename_ = entry.file_name();
                 let filename = filename_.to_str().unwrap_or("");
-                if filename.ends_with(".json") {
-                    let elem: T = deserialize_from(pathbuf)?;
-                    handle_element(elem);
+                if let Some(stem_osstring) = pathbuf.clone().file_stem() {
+                    match stem_osstring.to_os_string().into_string() {
+                        Ok(stem) => {
+                            if filename.ends_with(".json") {
+                                let elem: T = deserialize_from(pathbuf)?;
+                                handle_element(elem, &stem);
+                            }
+                        },
+                        Err(e) => {
+                            warn!("Failed to read element because filename stem converion failed");
+                        }
+                    }
                 }
             }
         }
         Ok(())
     } else {
-        Err(io::Error::new(io::ErrorKind::Other, format!("Path {} is not a directory", 
+        Err(io::Error::new(io::ErrorKind::NotFound, format!("Path {} is not a directory", 
             dir.as_ref().to_str().unwrap_or("???"))))
     }
 }

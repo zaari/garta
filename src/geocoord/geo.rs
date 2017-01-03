@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 
 extern crate regex;
 extern crate chrono;
+extern crate assert;
 
 use std::f64::consts;
 use std::fmt;
@@ -50,7 +51,9 @@ impl fmt::Display for PixelPos {
 /// A struct representing geographic location and point of time. 
 /// The coordinates are expected to use WGS84 reference ellipsoid.
 /// The altitude is in metres above sea leve.
-#[derive(Copy, Clone)]
+/// The distance calculations rely on Haversine formula which is accurate-enough for modern
+/// location systems (GPS, GLONASS, Galileo) and is relatively fast.
+#[derive(Copy, Clone, Debug)]
 pub struct Location {
     pub lat: f64, // south-north
     pub lon: f64, // west-east
@@ -135,7 +138,7 @@ impl Location {
         self.lat < other.lat
     }
     
-    /// Distance to the other location in metres (m).
+    /// Haversine distance between the locations on a sphere.
     pub fn distance_to(&self, other: &Location) -> f64 {
         // See: http://www.movable-type.co.uk/scripts/latlong.html
         const R: f64 = 6371000.0;
@@ -158,7 +161,7 @@ impl Location {
         degrees_between(0.0, deg_atan2(y, x), 360.0)
     }
     
-    /// Move to the given location.
+    /// Considering this point as a starting point move to the given direction for given distance.
     pub fn move_towards(&self, bearing: f64, distance: f64) -> Location {
         // See: http://www.movable-type.co.uk/scripts/latlong.html
         const R: f64 = 6371000.0;
@@ -191,6 +194,36 @@ impl Location {
         }
         None
     }
+    
+    /// Computes the approximate distance to the horizon at sea-level if elevation is defined.
+    /// The distance is in metres along the curved surface.
+    /// Te effect of atmospheric refraction is ignored and the earth is assumed to be a sphere.
+    pub fn distance_to_horizon(&self) -> Option<f64> {
+        const R: f64 = 6371000.0;
+        if let Some(h) = self.elevation {
+            let d = sqrt(h * (2.0 * R + h));
+            let s = R * atan(d / R);
+            Some(s)
+        } else {
+            None
+        }
+    }
+    
+    /// Finds the closest location on the multiline object. The resulting location can be either
+    /// at one of the multiline points or on the lines connecting them.
+    pub fn closest_to_multiline_location<L: LocationSequence>(&self, multiline: &L) -> Location {
+        Location::new(0.0, 0.0) // TODO
+    }
+    
+    /// Finds the closest point of the multiline object.
+    pub fn closest_to_multiline_point<L: LocationSequence>(&self, multiline: &L) -> Location {
+        Location::new(0.0, 0.0) // TODO
+    }
+    
+    /// Analyses the given area and returns true if the location is covered by the polygon.
+    pub fn is_inside_polygon<G: LocationSequence>(&self, polygon: &G) -> bool {
+        false // TODO
+    }
 }
 
 impl fmt::Display for Location {
@@ -213,14 +246,50 @@ impl fmt::Display for Location {
 
 // ---- LocationSequence ---------------------------------------------------------------------------
 
-// Abstraction of location sequence, also known as multi line, route, track, path, etc.
+/// Abstraction of location sequence, also known as multi line, route, track, path, etc.
+/// Can be used to outline a polygon too.
 pub trait LocationSequence {
     fn bounding_box(&self) -> GeoBox;
 
-    fn iterator<L: Iterator>(&self) -> L;
+//    fn iterator(&self) -> I where I: Iterator<Item = Location>;
+    // TODO: https://shadowmint.gitbooks.io/rust/content/howto/iterator.html
+    
+    /// Length from the first to the last location.
+    fn distance(&self) -> f64 { 0.0 }
+    
+    /// Duration from the first to the last location.
+    fn delta_time(&self) -> Option<f64> { None }
+
+    /// Average speed from the first to the last location.
+    fn average_speed(&self) -> Option<f64> { None }
+    
+    /// Altitude difference from the first to the last location.
+    fn delta_elevation(&self) -> Option<f64> { None }
+    
+    /// Returns a tuple of cumulative elevation gain.
+    fn cumulative_elevation_gain(&self) -> Option<f64> { None }
+    
+    /// Returns a tuple of cumulative elevation loss.
+    fn cumulative_elevation_loss(&self) -> Option<f64> { None }
+
+    /// Computes a time/speed histogram.
+    fn compute_time_speed_histogram(&self, speed_unit: f64) -> Option<Vec<f64>> { None }
+
+    /// Computes a distance/speed histogram.
+    fn compute_distance_speed_histogram(&self, speed_unit: f64) -> Option<Vec<f64>> { None }
+
+    /// Computes a speed/time histogram.
+    fn compute_speed_time_histogram(&self, time_unit: f64) -> Option<Vec<f64>> { None }
+
+    /// Computes a speed/distance histogram.
+    fn compute_speed_distance_histogram(&self, distance_unit: f64) -> Option<Vec<f64>> { None }
+
+    /// Length of the path including vertical gains and losses.
+    fn distance_pythagorean(&self) -> Option<f64> { None }
+
+    /// Return a new sequence without points that cause acceleration values higher than the given threshold (m/s^2). 
+    fn filter_by_acceleration(&self, max_acceleration: f64) { }     
 }
-
-
 
 // ---- GeoBox -------------------------------------------------------------------------------------
 
@@ -383,6 +452,7 @@ fn sqrt(r: f64) -> f64 { r.sqrt() }
 fn asinh(r: f64) -> f64 { r.asinh() }
 fn acosh(r: f64) -> f64 { r.acosh() }
 fn atan2(y: f64, x: f64) -> f64 { y.atan2(x) }
+fn atan(a: f64) -> f64 { a.atan() }
 fn abs(v: f64) -> f64 { v.abs() }
 
 // ---- degrees-based trigonometry -----------------------------------------------------------------
@@ -451,16 +521,16 @@ mod tests {
         assert!( wrangel_west.west_from(&wrangel_east) );
         assert!( wrangel_east.east_from(&wrangel_west) );
 
-        assert!( close_enough_to(wrangel_west.distance_to(&wrangel_east), 108000.0, 1000.0) );
-        assert!( close_enough_to(wrangel_east.distance_to(&wrangel_west), 108000.0, 1000.0) );
+        assert::close(wrangel_west.distance_to(&wrangel_east), 108000.0, 1000.0);
+        assert::close(wrangel_east.distance_to(&wrangel_west), 108000.0, 1000.0);
 
-        assert!( close_enough_to(wrangel_west.bearing_to(&wrangel_east), 90.0, 2.0) );
-        assert!( close_enough_to(wrangel_east.bearing_to(&wrangel_west), 270.0, 2.0) );
+        assert::close(wrangel_west.bearing_to(&wrangel_east), 90.0, 2.0);
+        assert::close(wrangel_east.bearing_to(&wrangel_west), 270.0, 2.0);
 
         // Distance tests based on simple Google searches, like "distance from visby to melbourne"
-        assert!( close_enough_to(visby.distance_to(&melbourne), 15601000.0, 10000.0) );
-        assert!( close_enough_to(melbourne.distance_to(&ushuaia), 9234000.0, 10000.0) );
-        assert!( close_enough_to(ushuaia.distance_to(&melbourne), melbourne.distance_to(&ushuaia), 1.0) );
+        assert::close(visby.distance_to(&melbourne), 15601000.0, 10000.0);
+        assert::close(melbourne.distance_to(&ushuaia), 9234000.0, 10000.0);
+        assert::close(ushuaia.distance_to(&melbourne), melbourne.distance_to(&ushuaia), 1.0);
     }
 
     #[test]
@@ -478,9 +548,9 @@ mod tests {
         let naissaar = Location::new_with_all(59.566667, 24.516667, None, 
             Some(naissaar_dt_fixed.with_timezone(&utc.timezone())));
         
-        assert!( close_enough_to(porkkala.distance_to(&naissaar), 47000.0, 1000.0) );
-        assert!( close_enough_to(porkkala.delta_time(&naissaar).unwrap(), 8.0 * 3600.0, 0.1) );
-        assert!( close_enough_to(porkkala.average_speed(&naissaar).unwrap(), 1.63, 1.0) );
+        assert::close(porkkala.distance_to(&naissaar), 47000.0, 1000.0);
+        assert::close(porkkala.delta_time(&naissaar).unwrap(), 8.0 * 3600.0, 0.1);
+        assert::close(porkkala.average_speed(&naissaar).unwrap(), 1.63, 1.0);
         
         //
         // Naissaar - Tallin
@@ -488,6 +558,17 @@ mod tests {
         let tallinn = Location::new(59.437222, 24.745278);
         assert!( naissaar.delta_time(&tallinn).is_none() );
         assert!( naissaar.average_speed(&tallinn).is_none() );
+    }
+
+    #[test]
+    fn test_location_distance_to_horizon() {
+        //
+        // Test distance to horizon in any place on the earth (Gotska Sandön here)
+        //
+        let h = 20.0;
+        let gotska_sandon = Location::new_with_elevation(58.366667, 19.25, h);
+        let s = gotska_sandon.distance_to_horizon();
+        assert::close( s.unwrap(), 3.57 * sqrt(h) * 1000.0, 10.0 );
     }
 
     #[test]

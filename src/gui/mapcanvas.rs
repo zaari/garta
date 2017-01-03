@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -102,7 +102,12 @@ fn draw(widget: &gtk::DrawingArea, c: &cairo::Context, map_win_rr: Rc<RefCell<Ma
         }
     }
     
-    if log_enabled!(Debug) { debug!("draw time: {:.3} ms width={}", 1000.0 * duration_to_seconds(&start_time.elapsed()), width); }
+    if log_enabled!(Debug) { 
+        let ms = 1000.0 * duration_to_seconds(&start_time.elapsed());
+        if ms >= 1.000 {
+            debug!("draw time: {:.3} ms width={}", ms, width); 
+        }
+    }
 }
 
 /// Event handler for mouse button press. Either start dragging a map element or scrolling the map.

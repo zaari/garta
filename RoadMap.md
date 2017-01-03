@@ -2,9 +2,11 @@
 Here is the development roadmap. This is subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state.
 
 ## Version 0.1
-- status bar of the main window is feature complete
-- map implemented with scrolling and zooming support
-- slippy maps can be defined with json files
+- status bar of the main window has maps, layers, coordinates and zoom level widgets completed
+- map implemented with basic scrolling and zooming support
+- maps have required copyright information and related clickable urls visible
+- slippy maps can be defined in json files
+- tile cache
 
 ## Version 0.2
 - GPX loading
@@ -12,6 +14,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 - transparent map layers
 - layers dialog
 - persistence
+- coordinates module moved to a separate repository and also published at crates.io
 
 ## Version 0.3
 - track editing
@@ -20,7 +23,7 @@ Here is the development roadmap. This is subject to change depending on the phas
 - GPX saving
 
 ## Version 0.4
-- internationalization (contributors needed)
+- internationalization, gettext (contributors needed)
 
 ## Version 0.5
 - attractions
@@ -43,5 +46,4 @@ Here is the development roadmap. This is subject to change depending on the phas
 ## Version 1.0
 - stable file formats and directory structure
 - improved error handling 
-
 

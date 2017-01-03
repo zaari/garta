@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::cmp::*;
-
 extern crate serde_json;
+
+use std::cmp::*;
 
 use core::tiles::{TileSource};
 
@@ -25,43 +25,39 @@ use core::tiles::{TileSource};
 /// A slippy map.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Map {
+    #[serde(default)]
     pub slug: String,
     
-    #[serde(default = "map_default_string")]
+    #[serde(default)]
     pub name: String,
     
-    #[serde(default = "map_default_transparent")]
+    #[serde(default)]
     pub transparent: bool,
 
-    #[serde(default = "map_default_urls")]
+    #[serde(default)]
     pub urls: Vec<String>,
     
-    #[serde(default = "map_default_string")]
+    #[serde(default)]
     pub token: String,
     
-    #[serde(default = "map_default_string")]
+    #[serde(default)]
     pub copyright_text: String,
     
-    #[serde(default = "map_default_string")]
+    #[serde(default)]
     pub copyright_url: String,
 }
-
-// Defaults for serde
-fn map_default_transparent() -> bool { false }
-fn map_default_urls() -> Vec<String> { Vec::new() }
-fn map_default_string() -> String { "".into() }
 
 impl Map {
     /// Constructor.
     pub fn new(name: String) -> Map {
         Map {
             slug: format!("map-{}", super::id::next_id()),
-            name: map_default_string(),
-            transparent: map_default_transparent(),
-            urls: map_default_urls(),
-            token: map_default_string(),
-            copyright_text: map_default_string(),
-            copyright_url: map_default_string(),
+            name: "".into(),
+            transparent: false,
+            urls: Vec::new(),
+            token: "".into(),
+            copyright_text: "".into(),
+            copyright_url: "".into(),
         }
     }
     

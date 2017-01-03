@@ -1,5 +1,5 @@
 // Garta - GPX viewer and editor
-// Copyright (C) 2016  Timo Saarinen
+// Copyright (C) 2016-2017, Timo Saarinen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,7 +22,10 @@ use std::fmt;
 
 use super::super::geo::Location;
 
+// ---- Collection ---------------------------------------------------------------------------------
+
 /// GPX File.
+#[derive(Debug)]
 pub struct Collection {
     pub version: String,
     pub creator: String,
@@ -51,12 +54,18 @@ impl Collection {
     }
 }
 
+// ---- Metadata -----------------------------------------------------------------------------------
+
 /// Metadata for GPX file.
+#[derive(Debug)]
 pub struct Metadata {
     pub extension: Option<Extension>,
 }
 
+// ---- Point --------------------------------------------------------------------------------------
+
 /// GPX waypoint, route point or track point.
+#[derive(Debug)]
 pub struct Point {
     pub location: Location,
     pub elev: Option<f64>, 
@@ -117,7 +126,10 @@ impl fmt::Display for Point {
     }
 }
 
+// ---- Route --------------------------------------------------------------------------------------
+
 /// GPX route.
+#[derive(Debug)]
 pub struct Route {
     pub name: Option<String>,
     pub cmt: Option<String>,
@@ -146,7 +158,10 @@ impl Route {
     }
 }
 
+// ---- Track --------------------------------------------------------------------------------------
+
 /// GPX track consisting of segments.
+#[derive(Debug)]
 pub struct Track {
     pub name: Option<String>,
     pub cmt: Option<String>,
@@ -175,7 +190,10 @@ impl Track {
     }
 }
 
+// ---- TrackSegment -------------------------------------------------------------------------------
+
 /// GPX track segments with points.
+#[derive(Debug)]
 pub struct TrackSegment {
     pub trkpt: LinkedList<Point>,
     pub extension: Option<Extension>,
@@ -190,14 +208,19 @@ impl TrackSegment {
     }
 }
 
+// ---- Extension ----------------------------------------------------------------------------------
 
 /// GPX extension element.
+#[derive(Clone, Debug)]
 pub enum Extension {
     Elem {name: String, value: String, attrs: LinkedList<ExtensionAttribute>},
     List{name: String, extensions: LinkedList<Extension>},
 }
 
+// ---- ExtensionAttribute -------------------------------------------------------------------------
+
 /// Attribute of extension element.
+#[derive(Clone, Debug)]
 pub struct ExtensionAttribute {
     pub name: String,
     pub value: String,
