@@ -1,6 +1,8 @@
 {
   "slug": "osm-france",
   "name": "OSM France",
+  "tile_width": 256,
+  "tile_height": 256,
   "transparent": false,
   "urls": [
     "http://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",

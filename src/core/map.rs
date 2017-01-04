@@ -22,7 +22,7 @@ use core::tiles::{TileSource};
 
 // ---- Map ----------------------------------------------------------------------------------------
 
-/// A slippy map.
+/// Slippy map parameters.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Map {
     #[serde(default)]
@@ -30,6 +30,12 @@ pub struct Map {
     
     #[serde(default)]
     pub name: String,
+    
+    #[serde(default)]
+    pub tile_width: Option<i32>,
+    
+    #[serde(default)]
+    pub tile_height: Option<i32>,
     
     #[serde(default)]
     pub transparent: bool,
@@ -53,6 +59,8 @@ impl Map {
         Map {
             slug: format!("map-{}", super::id::next_id()),
             name: "".into(),
+            tile_width: None,
+            tile_height: None,
             transparent: false,
             urls: Vec::new(),
             token: "".into(),
@@ -61,13 +69,19 @@ impl Map {
         }
     }
     
-    /// Convert Map into a TileSource.    
-    pub fn to_tile_source(&self) -> TileSource {
-        TileSource {
-            slug: self.slug.clone(),
-            name: self.name.clone(),
-            urls: self.urls.clone(),
-            token: self.token.clone(),
+    /// Convert Map into a TileSource. It's required that tile width and height are available,
+    /// and None will be returned if not.
+    pub fn to_tile_source(&self) -> Option<TileSource> {
+        if self.tile_width.is_some() && self.tile_height.is_some() {
+            Some(TileSource {
+                slug: self.slug.clone(),
+                urls: self.urls.clone(),
+                token: self.token.clone(),
+                tile_width: self.tile_width.unwrap(),
+                tile_height: self.tile_height.unwrap(),
+            })
+        } else {
+            None
         }
     }
 }

@@ -75,7 +75,7 @@ use std::cell::{RefCell};
 use std::rc::{Rc};
 use std::sync::{Arc, RwLock, Mutex, Condvar};
 use std::sync::mpsc::{channel, Receiver};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::thread;
 use std::cmp::{Ordering};
 use std::io::{Read};
@@ -93,7 +93,7 @@ use self::hyper::header;
 use self::hyper::{Client};
 use self::hyper::status::{StatusCode};
 use self::rand::{Rng};
-use self::cairo::{/*Context, */Format, ImageSurface};
+use self::cairo::{Format, ImageSurface};
 
 use core::persistence::{serialize_to, deserialize_from};
 use core::settings::{settings_read, DEFAULT_TILE_EXPIRE_DAYS};
@@ -120,7 +120,7 @@ pub struct TileCache {
     /// Memory used by the cached tiles
     mem_usage: usize,
     
-    /// Disk used by the cached tiles
+    /// Disk used by the cached tiles.
     disk_usage: u64,
 }
 
@@ -145,6 +145,7 @@ pub fn create_tile_cache() -> Rc<RefCell<TileCache>> {
 }
 
 impl TileCache {
+    // Private constructor. Use function create_tile_cache to create an instance.
     fn new() -> TileCache {
         let tcache = TileCache {
             tiles: BTreeMap::new(),
@@ -156,55 +157,59 @@ impl TileCache {
         tcache
     }
 
-    /// Load cache state from disk. This should be called at startup of the application.
-    pub fn restore(&self) {
-        debug!("Restoring tile cache state");
-        // TODO: load stored state. If that fails, clear the disk cache
-    }
-
-    /// Save cache state to disk. Typically this is called before the application is closed.
-    pub fn store(&self) {
-        debug!("storing tile cache state");
-        // TODO
-    }
-
     /// Return tile for the given request. The result may be an approximation.    
     pub fn get_tile(&mut self, treq: &TileRequest) -> Option<&mut Tile> {
         let tile_key = treq.to_key();
         if self.tiles.contains_key(&tile_key) {
             // Check tile state
-            match self.tiles.get(&tile_key).unwrap().state {
-                TileState::Void => {
-                    self.tiles.insert(tile_key.clone(), Tile::with_request(treq));
-                    self.tile_request_queue.write().unwrap().push_request(treq);
-                }
-                TileState::Pending => {
-                }
-                TileState::Fetching => {
-                }
-                TileState::Ready => {
-                    // TODO: check expire time
-                    if self.tiles.get(&tile_key).unwrap().is_expired() {
-                        debug!("Memory-cached tile expired, requesting an update: {}", tile_key);
+            if self.tiles.get(&tile_key).unwrap().state == TileState::Void {
+                // Special case for Void which requires mutating the tile hashmap
+                debug!("Loading a void tile: {}", tile_key);
+                let mut tile = Tile::new_with_request(treq);
+                tile.state = TileState::Pending;
+                self.tiles.insert(tile_key.clone(), tile);
+                self.tile_request_queue.write().unwrap().push_request(treq);
+                
+                // Return
+                Some(self.tiles.get_mut(&tile_key).unwrap())
+            } else {
+                // Faster case for the rest of the states
+                let tile = self.tiles.get_mut(&tile_key).unwrap();
+                match tile.state {
+                    TileState::Void => {
+                        panic!("Unexpected code path!");
+                    }
+                    TileState::Pending => {
+                    }
+                    TileState::Fetching => {
+                    }
+                    TileState::Ready => {
+                        // Check tile expiration
+                        if tile.is_expired() {
+                            debug!("Memory-cached tile expired, requesting an update: {}", tile_key);
+                            self.tile_request_queue.write().unwrap().push_request(treq);
+                        }
+                    }
+                    TileState::Error => {
+                    }
+                    TileState::Flushed => {
+                        debug!("Reloading a flushed tile: {}", tile_key);
+                        tile.state = TileState::Pending;
                         self.tile_request_queue.write().unwrap().push_request(treq);
                     }
                 }
-                TileState::Error => {
-                }
-                TileState::Flushed => {
-                    self.tile_request_queue.write().unwrap().push_request(treq);
-                }
-            }
 
-            // Update access time
-            self.tiles.get_mut(&tile_key).unwrap().access_time = UTC::now();
-            
-            // Return
-            Some(self.tiles.get_mut(&tile_key).unwrap())
+                // Update access time
+                tile.access_time = UTC::now();
+                
+                // Return
+                Some(tile)
+            }
         } else {
             // Enqueue the request and create a new empty tile
+            debug!("Requesting a new tile: {}", tile_key);
             self.tile_request_queue.write().unwrap().push_request(treq);
-            let mut tile = Tile::with_request(treq);
+            let mut tile = Tile::new_with_request(treq);
             
             // Approximate content
             if treq.z > 0 {
@@ -242,8 +247,8 @@ impl TileCache {
         
             // Assign tile data
             let old_tile_disk_usage = tile.disk_usage;
-            tile.data = Some(treq_result.data.clone());
             tile.state = TileState::Ready;
+            tile.data = Some(treq_result.data.clone());
             tile.width = treq_result.tile_width;
             tile.height = treq_result.tile_height;
             tile.expire_time = match treq_result.expire_time {
@@ -331,12 +336,116 @@ impl TileCache {
         }
         
     }
+
+    /// Save cache state to disk. Typically this is called before the application is closed.
+    pub fn store(&self) {
+        // Create state
+        let state = TileCacheState::new(self);
+        
+        // Write to cache dir
+        let mut pathbuf = settings_read().cache_directory();
+        pathbuf.push("state");
+        match serialize_to(&state, pathbuf) {
+            Ok(()) => {
+                debug!("Tile cache state stored successfully: {:?}", self);
+            },
+            Err(e) => {
+                warn!("Failed to store tile cache state: {}", e);
+            }
+        }
+    }
+
+    /// Load cache state from disk. This should be called at startup of the application.
+    pub fn restore(&mut self) {
+        // Read from cache dir
+        let mut pathbuf = settings_read().cache_directory();
+        pathbuf.push("state");
+        match deserialize_from::<TileCacheState, path::PathBuf>(pathbuf) {
+            Ok(mut tcstate) => {
+                tcstate.apply(self);
+                debug!("Tile cache restored: {:?}", self);
+            },
+            Err(e) => {
+                warn!("Failed to restore tile cache state: {}", e);
+                info!("Clearing tile cache");
+                // TODO: clear cache
+            }
+        }        
+    }
+}
+
+impl fmt::Debug for TileCache {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "tiles={} queue.len={} observer={} mem_usage={} disk_usage={}",
+            self.tiles.len(),
+            {
+                match self.tile_request_queue.read() {
+                    Ok(trq) => { trq.queue.len().to_string() }, Err(e) => { "???".into() }
+                }
+            },
+            self.observer.is_some(),
+            self.mem_usage,
+            self.disk_usage)
+    }
+}
+
+// ---- TileCacheState ---------------------------------------------------------------------------
+
+/// Needed when storing and restoring TileCache state at application startup and shutdown.
+/// See TileCache::restore and TileCache::store for more info.
+#[derive(Serialize, Deserialize, Debug)]
+struct TileCacheState {
+    // TileRequests representing Tiles.
+    requests: Vec<TileRequest>,
+    
+    // Tile key to disk usage map.
+    tile_disk_usages: HashMap<String, u64>,
+}
+
+impl TileCacheState {
+    /// Create a snapshot from TileCache
+    fn new(tcache: &TileCache) -> TileCacheState {
+        let mut tcc = TileCacheState {
+            requests: Vec::new(),
+            tile_disk_usages: HashMap::new(),
+        };
+        
+        // Convert Tiles to TileRequests for serialization.
+        for (tile_id, ref tile) in &tcache.tiles {
+            tcc.requests.push(TileRequest::new_from_tile(tile));
+            tcc.tile_disk_usages.insert(tile_id.clone(), tile.disk_usage);
+        }
+        
+        tcc
+    }
+
+    /// Apply tile cache state to tile cache.    
+    fn apply(&mut self, tcache: &mut TileCache) {
+        tcache.mem_usage = 0;
+        tcache.disk_usage = 0;
+
+        // Convert deserialized TileRequests to Tiles
+        for treq in &self.requests {
+            let mut tile = Tile::new_with_request(treq);
+            tile.state = TileState::Flushed;
+            tile.filepath = {
+                match treq.to_cache_path() {
+                    Ok(pathbuf) => { Some(pathbuf) },
+                    Err(e) => { warn!("Failed to form tile cache path: {}", e); None }
+                }
+            };
+            tile.disk_usage = *self.tile_disk_usages.get(&treq.to_key()).unwrap_or(&0u64);
+            tcache.mem_usage += tile.estimate_mem_usage();
+            tcache.disk_usage += tile.disk_usage;
+            tcache.tiles.insert(treq.to_key(), tile);
+        }
+    }
 }
 
 // ---- Tile ---------------------------------------------------------------------------------------
 
 /// Tile state.
-#[derive(Clone, Debug)]
+#[derive(Clone, Ord, PartialOrd, PartialEq, Eq, Debug)]
 pub enum TileState {
     // Without any real information or data.
     Void,
@@ -346,10 +455,10 @@ pub enum TileState {
     /// or contains expired data.
     Pending,
     
-    /// Content loading from tile source.
+    /// Content been loaded from tile source.
     Fetching,
     
-    /// Content loading from tile source.
+    /// Content ready for use.
     Ready,
     
     /// Content loading resulted an error.
@@ -365,10 +474,13 @@ pub struct Tile {
     /// State of the tile
     pub state: TileState,
 
-    /// x coordinate
+    // Source where the tile was (or will be) loaded.
+    source: TileSource,
+
+    /// x coordinate (range is 0..2^z)
     x: u32,
     
-    /// y coordinate
+    /// y coordinate (range is 0..2^z)
     y: u32,
     
     /// zoom level
@@ -384,10 +496,10 @@ pub struct Tile {
     height: i32,
     
     /// Time when this tile was needed.
-    pub access_time: DateTime<UTC>,
+    access_time: DateTime<UTC>,
     
     /// Time when this tile expires.
-    pub expire_time: DateTime<UTC>,
+    expire_time: DateTime<UTC>,
     
     /// Tile data as a byte array.
     data: Option<Box<[u8]>>,
@@ -405,10 +517,12 @@ pub struct Tile {
 
 impl Tile {
     /// Constructor from TileRequest.
-    pub fn with_request(treq: &TileRequest) -> Tile {
+    pub fn new_with_request(treq: &TileRequest) -> Tile {
         Tile{ state: TileState::Pending, 
+              source: treq.source.clone(),
               x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
-              width: 256, height: 256,
+              width: treq.source.tile_width, 
+              height: treq.source.tile_width,
               access_time: UTC::now(),
               expire_time: UTC::now(), // TODO: future
               data: None,
@@ -422,7 +536,10 @@ impl Tile {
     /// Constructor a black tile for TileRequest.
     fn new(treq: &TileRequest, r: f64, g: f64, b: f64) -> Tile {
         // Create black isurface
-        let isurface = ImageSurface::create(Format::ARgb32, 256, 256);
+        let isurface = ImageSurface::create(
+            Format::ARgb32, 
+            treq.source.tile_width, 
+            treq.source.tile_height);
         let c = cairo::Context::new(&isurface);
         c.set_source_rgb(r, g, b);
         c.paint();
@@ -430,8 +547,10 @@ impl Tile {
         // Return tile        
         Tile { 
             state: TileState::Pending, 
+            source: treq.source.clone(),
             x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
-            width: 256, height: 256,
+            width: treq.source.tile_width, 
+            height: treq.source.tile_height,
             access_time: UTC::now(),
             expire_time: UTC::now(), // TODO: future
             data: None,
@@ -502,6 +621,7 @@ impl Tile {
         // Return
         Tile {
             state: TileState::Pending, 
+            source: treq.source.clone(),
             x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
             width: self.width, height: self.height,
             access_time: UTC::now(),
@@ -568,7 +688,7 @@ impl fmt::Debug for Tile {
 // ---- TileRequest --------------------------------------------------------------------------------
 
 /// Cloneable TileRequest.
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TileRequest {
     /// Tile request generation (a group of tile requests).
     generation: u64,
@@ -599,6 +719,15 @@ impl TileRequest {
             generation: generation, priority: priority,
             x: x, y: y, z: z, mult: mult,
             source: source,
+        }
+    }
+    
+    /// Constructor for TileCacheState.
+    fn new_from_tile(tile: &Tile) -> TileRequest {
+        TileRequest {
+            generation: 0, priority: 0,
+            x: tile.x, y: tile.y, z: tile.z, mult: tile.mult,
+            source: tile.source.clone(),
         }
     }
     
@@ -1109,28 +1238,32 @@ impl Drop for TileCache {
 // ---- TileSource ---------------------------------------------------------------------------------
 
 /// The network source where tiles are loaded.
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TileSource {
     // File system friendly name
     pub slug: String,
-
-    // A unique name of the tile source.
-    pub name: String,
 
     /// An array of mutually optional urls
     pub urls: Vec<String>,
     
     /// Token required by the service provider
     pub token: String,
+
+    /// Tile width which has to be known
+    pub tile_width: i32,
+    
+    /// Tile height which has to be known
+    pub tile_height: i32,
 }
 
 impl TileSource {
-    pub fn new() -> TileSource {
+    pub fn new(slug: String, urls: Vec<String>, token: String, tile_width: i32, tile_height: i32) -> TileSource {
         TileSource {
-            slug: "unnamed".into(),
-            name: "Unnamed".into(),
-            urls: Vec::new(),
-            token: "".into(),
+            slug: slug,
+            urls: urls,
+            token: token,
+            tile_width: tile_width,
+            tile_height: tile_height,
         }
     }
 
@@ -1153,8 +1286,9 @@ impl TileSource {
 
             let mut expires = None; // TODO            
             if url.starts_with("file:") {
-                // Load data from local disk
-                // TODO
+                // Load data from local disk 
+                return TileRequestResult::with_error(treq, 
+                    "File system based tile sources are not supperted yet".into()); // TODO
             } else {
                 // Request tile data from a remote server with GET
                 match client.get(url.as_str()).send() {
@@ -1207,7 +1341,7 @@ impl TileSource {
                                    .replace("${token}", self.token.as_str());
             Ok(url_with_vars)
         } else {
-            Err(format!("No urls defined for the tile source {}", self.name))
+            Err(format!("No urls defined for the tile source {}", self.slug))
         }
     }
     
@@ -1277,11 +1411,14 @@ mod tests {
         env_logger::init().unwrap();
 
         // Tile source
-        let mut tile_source = TileSource::new();
-        tile_source.slug = "osm-carto".into();
-        tile_source.name = "OpenStreetMap Carto".into();
-        tile_source.urls.push("http://a.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
-        tile_source.urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
+        let tile_source = TileSource::new(
+            "osm-carto".into(),
+            {   let mut urls: Vec<String> = Vec::new();
+                urls.push("http://a.tile.openstreetmap.org/${z}/${x}/${y}.png".to_string());
+                urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".to_string());
+                urls
+            },
+            "".into(), 256,  256, );
         
         // Tile request
         let treq = TileRequest::new(1, 1, 0, 0, 1, 1, tile_source.clone());

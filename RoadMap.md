@@ -1,5 +1,5 @@
-# Roadmap
-This is the development roadmap of Garta application. It's subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state.
+# Garta Roadmap
+This is the development roadmap which is subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state.
 
 ## Version 0.1
 - status bar of the main window has maps, layers, coordinates and zoom level widgets completed
@@ -15,7 +15,7 @@ This is the development roadmap of Garta application. It's subject to change dep
 - transparent map layers
 - layers dialog
 - full data persistence
-- coordinates module moved to a separate repository and also published at crates.io
+- coordinates module relicensed and moved to a separate repository and also published at crates.io
 
 ## Version 0.3
 - track editing

@@ -1,6 +1,8 @@
 {
   "slug": "osm-carto",
   "name": "OSM Carto",
+  "tile_width": 256,
+  "tile_height": 256,
   "transparent": false,
   "urls": [
     "http://a.tile.openstreetmap.org/${z}/${x}/${y}.png",

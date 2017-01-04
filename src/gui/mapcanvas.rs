@@ -74,9 +74,7 @@ fn draw(widget: &gtk::DrawingArea, c: &cairo::Context, map_win_rr: Rc<RefCell<Ma
     let (width, height) = widget.get_size_request();
 
     // Tile source
-    let mut tile_source = TileSource::new();
-    tile_source.slug = "osm-carto".into();
-    tile_source.name = "OpenStreetMap Carto".into();
+    let mut tile_source = TileSource::new("osm-carto".to_string(), Vec::new(), "".into(), 256, 256);
     tile_source.urls.push("http://a.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
     tile_source.urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
     tile_source.urls.push("http://c.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
