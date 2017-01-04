@@ -17,7 +17,7 @@
 use std::cell::{RefCell};
 use std::rc::{Rc};
 
-use core::root::*;
+use core::atlas::*;
 use core::id::*;
 
 use geocoord;

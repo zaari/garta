@@ -15,8 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod id;
-pub mod root;
-pub mod map;
+pub mod atlas;
 pub mod tiles;
 pub mod settings;
 pub mod elements;

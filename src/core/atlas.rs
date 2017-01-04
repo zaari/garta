@@ -22,8 +22,8 @@ use std::cmp::*;
 
 use geocoord::geo::{Location, GeoBox};
 use core::elements::*;
-use core::map::{Map};
 use core::id::{UniqueId};
+use core::tiles::{TileSource};
 
 // ---- Atlas --------------------------------------------------------------------------------------
 
@@ -220,6 +220,95 @@ impl PartialEq for Layer {
 }
 
 impl Eq for Layer {}
+
+// ---- Map ----------------------------------------------------------------------------------------
+
+/// Slippy map parameters.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Map {
+    #[serde(default)]
+    pub slug: String,
+    
+    #[serde(default)]
+    pub name: String,
+    
+    #[serde(default)]
+    pub tile_width: Option<i32>,
+    
+    #[serde(default)]
+    pub tile_height: Option<i32>,
+    
+    #[serde(default)]
+    pub transparent: bool,
+
+    #[serde(default)]
+    pub urls: Vec<String>,
+    
+    #[serde(default)]
+    pub token: String,
+    
+    #[serde(default)]
+    pub copyright_text: String,
+    
+    #[serde(default)]
+    pub copyright_url: String,
+}
+
+impl Map {
+    /// Constructor.
+    pub fn new(name: String) -> Map {
+        Map {
+            slug: format!("map-{}", super::id::next_id()),
+            name: "".into(),
+            tile_width: None,
+            tile_height: None,
+            transparent: false,
+            urls: Vec::new(),
+            token: "".into(),
+            copyright_text: "".into(),
+            copyright_url: "".into(),
+        }
+    }
+    
+    /// Convert Map into a TileSource. It's required that tile width and height are available,
+    /// and None will be returned if not.
+    pub fn to_tile_source(&self) -> Option<TileSource> {
+        if self.tile_width.is_some() && self.tile_height.is_some() {
+            Some(TileSource {
+                slug: self.slug.clone(),
+                urls: self.urls.clone(),
+                token: self.token.clone(),
+                tile_width: self.tile_width.unwrap(),
+                tile_height: self.tile_height.unwrap(),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl Ord for Map {
+    // Name-based sorting.
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for Map {
+    // Name-based sorting.
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl PartialEq for Map {
+    // Name-based sorting.
+    fn eq(&self, other: &Self) -> bool {
+        self.name.eq(&other.name)
+    }
+}
+
+impl Eq for Map {}
 
 // ---- MapView ------------------------------------------------------------------------------------
 

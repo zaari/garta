@@ -25,7 +25,7 @@ use std::collections::linked_list::LinkedList;
 use self::gtk::prelude::*;
 use self::glib::variant::{FromVariant};
 use geocoord::geo::{Location};
-use core::root::{Atlas, MapView};
+use core::atlas::{Atlas, MapView};
 use core::id::{UniqueId};
 use core::tiles::{TileCache, TileObserver, TileRequest};
 use gui::mapcanvas::{build_map_canvas};

@@ -34,8 +34,7 @@ use std::process::{exit};
 
 use core::settings::{settings_write, settings_read};
 use core::tiles::{create_tile_cache};
-use core::root::{Atlas, Layer, MapView};
-use core::map::{Map};
+use core::atlas::{Atlas, Layer, Map, MapView};
 use core::persistence::*;
 
 fn main() {

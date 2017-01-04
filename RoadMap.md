@@ -3,11 +3,11 @@ This is the development roadmap which is subject to change depending on the phas
 
 ## Version 0.1
 - status bar of the main window has maps, layers, coordinates and zoom level widgets completed
-- map implemented with basic scrolling and zooming support
-- maps have the required copyright information and the related clickable urls visible
 - slippy maps can be defined in json files
 - tile cache
-- view-related data persistence 
+- map implemented with basic scrolling and zooming support
+- maps have the required copyright information and the related clickable urls visible
+- view-related persistence 
 
 ## Version 0.2
 - GPX loading
