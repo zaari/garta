@@ -11,7 +11,9 @@
 find src -name "*.rs" | xargs wc -l
 
 # Cargo update
-cargo update
+if test "`find Cargo.lock -mtime +7`" ; then
+  cargo update
+fi
 
 # The initial build
 cargo test

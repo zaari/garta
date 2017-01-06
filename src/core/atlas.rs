@@ -20,7 +20,7 @@ use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use std::cmp::*;
 
-use geocoord::geo::{Location, GeoBox};
+use geocoord::geo::{Location, Projection};
 use core::elements::*;
 use core::id::{UniqueId};
 use core::tiles::{TileSource};
@@ -285,6 +285,12 @@ impl Map {
             None
         }
     }
+    
+    /// Returns projection of the map.
+    pub fn as_projection(&self) -> Projection {
+        // Currently the only supported projection is Mercator one.
+        Projection::new_mercator_projection()
+    }
 }
 
 impl Ord for Map {
@@ -313,9 +319,10 @@ impl Eq for Map {}
 // ---- MapView ------------------------------------------------------------------------------------
 
 /// Metadata about map window.
+#[derive(Clone)]
 pub struct MapView {
     /// Outline of the view area.
-    pub bounding_box: GeoBox,
+    pub center: Location,
 
     /// Zoom level of the view.
     pub zoom_level: u8,
@@ -333,23 +340,11 @@ pub struct MapView {
 impl MapView {
     pub fn new() -> MapView {
         MapView {
-            bounding_box: GeoBox::new(Location::new(0.0, 0.0), Location::new(0.0, 0.0)),
+            center: Location::new(0.0, 0.0),
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
             map_slug: "".into(),
             coordinates_format: "dm".into(),
-        }
-    }
-}
-
-impl Clone for MapView {
-    fn clone(&self) -> MapView {
-        MapView {
-            bounding_box: self.bounding_box,
-            zoom_level: self.zoom_level.clone(),
-            visible_layer_ids: self.visible_layer_ids.clone(),
-            map_slug: self.map_slug.clone(),
-            coordinates_format: self.coordinates_format.clone(),
         }
     }
 }

@@ -72,32 +72,38 @@ pub fn build_map_canvas(map_win: &MapWindow) -> gtk::DrawingArea {
 fn draw(widget: &gtk::DrawingArea, c: &cairo::Context, map_win_rr: Rc<RefCell<MapWindow>>) {
     let start_time = Instant::now();
     let (width, height) = widget.get_size_request();
+    let map_win = map_win_rr.borrow();
 
-    // Tile source
-    let mut tile_source = TileSource::new("osm-carto".to_string(), Vec::new(), "".into(), 256, 256);
-    tile_source.urls.push("http://a.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
-    tile_source.urls.push("http://b.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
-    tile_source.urls.push("http://c.tile.openstreetmap.org/${z}/${x}/${y}.png".into());
+    // Map
+    let map_slug = &map_win.map_view.borrow().map_slug;
+    if let Some(ref map) = map_win.atlas.borrow().maps.get(map_slug) {
+        // Tile source
+        if let Some(tile_source) = map.to_tile_source() {
+            // Tile cache    
+            let tcache_rr = map_win.tile_cache.clone();
+            let mut tcache = tcache_rr.borrow_mut();
+            
+            // Request tile
+            let treq = TileRequest::new(1, 1, 0, 0, 0, 1, tile_source);
+            if let Some(tile) = tcache.get_tile(&treq) {
+                tile.get_surface();
+                
+                // Tile dimensions
+                let tw = tile.width();
+                let th = tile.height();
 
-    // Tile cache    
-    let tcache_rr = map_win_rr.borrow().tile_cache.clone();
-    let mut tcache = tcache_rr.borrow_mut();
-    
-    // Request tile
-    let treq = TileRequest::new(1, 1, 0, 0, 0, 1, tile_source);
-    if let Some(tile) = tcache.get_tile(&treq) {
-        tile.get_surface();
-        
-        // Tile dimensions
-        let tw = tile.width();
-        let th = tile.height();
+                // Draw tile
+                if let Some(ref tile_surface) = tile.get_surface() {
 
-        // Draw tile
-        if let Some(ref tile_surface) = tile.get_surface() {
-
-            c.set_source_surface(tile_surface, ((width - tw) / 2) as f64, ((height - th) / 2) as f64);
-            c.paint();
+                    c.set_source_surface(tile_surface, ((width - tw) / 2) as f64, ((height - th) / 2) as f64);
+                    c.paint();
+                }
+            }
+        } else {
+            warn!("No tile source for map {}", map.slug);
         }
+    } else {
+        warn!("No map for slug {}", map_slug);
     }
     
     if log_enabled!(Debug) { 

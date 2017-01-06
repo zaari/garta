@@ -16,11 +16,13 @@
 
 extern crate serde;
 extern crate serde_json;
+extern crate chrono;
 
 use std::io;
 use std::fs;
 use std::path;
 use std::fmt;
+use self::chrono::{DateTime, UTC};
 
 /// Loads all JSON elements from the given directory and sends them to closure 'handle_element'.
 /// Doesn't recurse subdirectories.
@@ -180,5 +182,30 @@ fn make_safe_name<S>(name: &S) -> String
         }
     }
     s
+}
+
+/// Serializer for chrono::DateTime
+pub fn serialize_datetime<S>(dt: &DateTime<UTC>, f: &mut S) -> Result<(), S::Error> 
+        where S: serde::Serializer,
+{
+    let s = dt.to_rfc3339();
+    f.serialize_str(s.as_str())?;
+    Ok(())
+}
+
+/// Deserializer for chrono::DateTime
+pub fn deserialize_datetime<D>(f: &mut D) -> Result<DateTime<UTC>, D::Error> 
+        where D: serde::Deserializer
+{
+    let s: String = serde::Deserialize::deserialize(f)?;
+    let utc = UTC::now();
+    match DateTime::parse_from_rfc3339(s.as_str()) {
+        Ok(dt_tz) => { 
+            Ok(dt_tz.with_timezone(&utc.timezone()))
+        }
+        Err(e) => {  
+            Err(serde::de::Error::custom(e.to_string()))
+        }
+    }
 }
 

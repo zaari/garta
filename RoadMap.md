@@ -15,7 +15,7 @@ This is the development roadmap which is subject to change depending on the phas
 - transparent map layers
 - layers dialog
 - full data persistence
-- coordinates module relicensed and moved to a separate repository and also published at crates.io
+- coordinates module relicensing and moving to a separate repository and also published at crates.io
 
 ## Version 0.3
 - track editing

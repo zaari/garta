@@ -381,54 +381,73 @@ impl fmt::Display for GeoBox {
 
 // ---- Projection ---------------------------------------------------------------------------------
 
-/// Trait for projections, to map position between map coordinates and view pixels.
-pub trait Projection {
+/// Collection of needed projections.
+pub enum Projection {
+    Mercator(MercatorProjection),
+}
+
+impl Projection {
+    pub fn new_mercator_projection() -> Projection {
+        Projection::Mercator(MercatorProjection::new())
+    }
+
     /// Converts coordinates to pixel position (with origin at 0°N 0°E).
     /// Parameter 'ppdoe' is pixels per degree on equator.
-    fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos;
+    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos {
+        match *self {
+            Projection::Mercator(ref p) => { p.location_to_global_pixel_pos(loc, ppdoe) }
+        }
+    }
     
     /// Converts pixel position (with origin at 0°N 0°E) to coordinates.
     /// Parameter 'ppdoe' is pixels per degree on equator.
-    fn global_pixel_pos_to_location(&self, pp: PixelPos, ppdoe: f64) -> Location;
+    pub fn global_pixel_pos_to_location(&self, pp: PixelPos, ppdoe: f64) -> Location {
+        match *self {
+            Projection::Mercator(ref p) => { p.global_pixel_pos_to_location(pp, ppdoe) }
+        }
+    }
     
     // Returns gobal pixel position of the "top left" corner of the projection.
-    fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos;
+    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos {
+        match *self {
+            Projection::Mercator(ref mut p) => { p.northwest_global_pixel(ppdoe) }
+        }
+    }
 }
 
 // ---- MercatorProjection -------------------------------------------------------------------------
 
+/// Mercator projection-realted position conversion math.
 pub struct MercatorProjection { 
     current_ppdoe: f64,
     current_northwest_global_pixel: PixelPos,
 }
 
+/// Mercator projection coordinate conversions. 
+/// https://en.wikipedia.org/wiki/Mercator_projection#Inverse_transformations
 impl MercatorProjection {
-    fn new() -> MercatorProjection {
+    pub fn new() -> MercatorProjection {
         MercatorProjection{current_ppdoe: -1.0, current_northwest_global_pixel: PixelPos::new(0, 0)}
     }
-}
 
-///
-/// Mercator projection coordinate conversions. 
-///
-/// https://en.wikipedia.org/wiki/Mercator_projection#Inverse_transformations
-///
-impl Projection for MercatorProjection {
-    fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos {
+    #[inline] 
+    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos {
         const R: f64 = 360.0 / (2.0 * consts::PI);
         let phi = loc.lat * consts::PI / 180.0;
         let y = R * asinh(tan(phi));
         PixelPos::new((loc.lon * ppdoe) as i32, (-y * ppdoe) as i32)
     }
     
-    fn global_pixel_pos_to_location(&self, pos: PixelPos, ppdoe: f64) -> Location {
+    #[inline] 
+    pub fn global_pixel_pos_to_location(&self, pos: PixelPos, ppdoe: f64) -> Location {
         const R: f64 = 360.0 / (2.0 * consts::PI);
         let y = pos.y as f64 / ppdoe;
         let phi = asinh(tanh(y / R));
         Location::new(-phi * 180.0 / consts::PI, pos.x as f64 / ppdoe)
     }
 
-    fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos {
+    #[inline] 
+    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos {
         if self.current_ppdoe != ppdoe {
             // The northwest corner based on Mercator projection definition
             let nw_loc = Location::new(consts::PI.sinh().atan() * 180.0 / consts::PI, -180.0);
@@ -442,29 +461,30 @@ impl Projection for MercatorProjection {
 
 // ---- traditional math functions -----------------------------------------------------------------
 
-fn sin(r: f64) -> f64 { r.sin() }
-fn cos(r: f64) -> f64 { r.cos() }
-fn tan(r: f64) -> f64 { r.tan() }
-fn sinh(r: f64) -> f64 { r.sinh() }
-fn cosh(r: f64) -> f64 { r.cosh() }
-fn tanh(r: f64) -> f64 { r.tanh() }
-fn sqrt(r: f64) -> f64 { r.sqrt() }
-fn asinh(r: f64) -> f64 { r.asinh() }
-fn acosh(r: f64) -> f64 { r.acosh() }
-fn atan2(y: f64, x: f64) -> f64 { y.atan2(x) }
-fn atan(a: f64) -> f64 { a.atan() }
-fn abs(v: f64) -> f64 { v.abs() }
+#[inline] fn sin(r: f64) -> f64 { r.sin() }
+#[inline] fn cos(r: f64) -> f64 { r.cos() }
+#[inline] fn tan(r: f64) -> f64 { r.tan() }
+#[inline] fn sinh(r: f64) -> f64 { r.sinh() }
+#[inline] fn cosh(r: f64) -> f64 { r.cosh() }
+#[inline] fn tanh(r: f64) -> f64 { r.tanh() }
+#[inline] fn sqrt(r: f64) -> f64 { r.sqrt() }
+#[inline] fn asinh(r: f64) -> f64 { r.asinh() }
+#[inline] fn acosh(r: f64) -> f64 { r.acosh() }
+#[inline] fn atan2(y: f64, x: f64) -> f64 { y.atan2(x) }
+#[inline] fn atan(a: f64) -> f64 { a.atan() }
+#[inline] fn abs(v: f64) -> f64 { v.abs() }
 
 // ---- degrees-based trigonometry -----------------------------------------------------------------
 
-fn deg_sin(d: f64) -> f64 { (d * consts::PI / 180.0).sin() }
-fn deg_cos(d: f64) -> f64 { (d * consts::PI / 180.0).cos() }
-fn deg_tan(d: f64) -> f64 { (d * consts::PI / 180.0).tan() }
-fn deg_atan2(y: f64, x: f64) -> f64 { y.atan2(x) * 180.0 / consts::PI }
-fn deg_asin(d: f64) -> f64 { d.asin() * consts::PI / 180.0 }
-fn deg_acos(d: f64) -> f64 { d.acos() * consts::PI / 180.0 }
+#[inline] fn deg_sin(d: f64) -> f64 { (d * consts::PI / 180.0).sin() }
+#[inline] fn deg_cos(d: f64) -> f64 { (d * consts::PI / 180.0).cos() }
+#[inline] fn deg_tan(d: f64) -> f64 { (d * consts::PI / 180.0).tan() }
+#[inline] fn deg_atan2(y: f64, x: f64) -> f64 { y.atan2(x) * 180.0 / consts::PI }
+#[inline] fn deg_asin(d: f64) -> f64 { d.asin() * consts::PI / 180.0 }
+#[inline] fn deg_acos(d: f64) -> f64 { d.acos() * consts::PI / 180.0 }
 
 /// Makes the degrees to be between the minimum and maximum.
+#[inline] 
 fn degrees_between(minimum: f64, mut degrees: f64, maximum: f64) -> f64 {
     assert!(maximum > minimum);
     assert!(maximum - minimum >= 360.0);
