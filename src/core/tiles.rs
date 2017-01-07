@@ -439,8 +439,17 @@ impl TileCacheState {
         tcache.disk_usage = 0;
 
         // Make Tiles tiles flushed and fill the usage fields
+        let mut black_surface: Option<cairo::ImageSurface> = None;
         for (_, tile) in &mut tcache.tiles {
             tile.state = TileState::Flushed;
+            if black_surface.is_some() {
+                tile.surface = black_surface.clone();
+            } else {
+                // Actually we are sharing the same surface with several tiles (to save memory)
+                tile.paint_with_color(0.0, 0.0, 0.0);
+                black_surface = tile.surface.clone();
+            }
+            tile.surface_is_temporary = true;
             tcache.mem_usage += tile.estimate_mem_usage();
             tcache.disk_usage += tile.disk_usage;
         }
@@ -512,8 +521,14 @@ pub struct Tile {
     /// Tile data converted to a surface
     #[serde(skip_serializing, skip_deserializing)]
     surface: Option<ImageSurface>,
+
+    /// Returned a reference to this when there is no surface
     #[serde(skip_serializing, skip_deserializing)]
     surface_none: Option<ImageSurface>,
+    
+    /// True if the surface field content is temporary until the actual data is loaded.
+    #[serde(skip_serializing, skip_deserializing)]
+    surface_is_temporary: bool,
     
     /// Path for disk cache tile file.
     filepath: Option<path::PathBuf>,
@@ -534,6 +549,7 @@ impl Tile {
               data: None,
               surface: None,
               surface_none: None,
+              surface_is_temporary: false,
               filepath: None,
               disk_usage: 0,
         }
@@ -541,17 +557,8 @@ impl Tile {
 
     /// Constructor a black tile for TileRequest.
     fn new(treq: &TileRequest, r: f64, g: f64, b: f64) -> Tile {
-        // Create black isurface
-        let isurface = ImageSurface::create(
-            Format::ARgb32, 
-            treq.source.tile_width, 
-            treq.source.tile_height);
-        let c = cairo::Context::new(&isurface);
-        c.set_source_rgb(r, g, b);
-        c.paint();
-
         // Return tile        
-        Tile { 
+        let mut tile = Tile { 
             state: TileState::Pending, 
             x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
             width: treq.source.tile_width, 
@@ -561,6 +568,7 @@ impl Tile {
             data: None,
             surface: None,
             surface_none: None,
+            surface_is_temporary: false,
             filepath: {
                 match treq.to_cache_path() {
                     Ok(pathbuf) => {
@@ -572,7 +580,19 @@ impl Tile {
                 }
             },
             disk_usage: 0,
-        }
+        };
+        tile.paint_with_color(r, g, b);
+        tile.surface_is_temporary = true;
+        tile
+    }
+
+    /// Creates a surface which is entirely black.
+    fn paint_with_color(&mut self, r: f64, g: f64, b: f64) {
+        let isurface = ImageSurface::create(Format::ARgb32, self.width, self.height);
+        let c = cairo::Context::new(&isurface);
+        c.set_source_rgb(r, g, b);
+        c.paint();
+        self.surface = Some(isurface);
     }
 
     // Getters   
@@ -590,12 +610,13 @@ impl Tile {
     
     /// Return image surface. May involve an in-memory data conversion.
     pub fn get_surface(&mut self) -> Option<&ImageSurface> {
-        if self.surface.is_none() {
+        if self.surface.is_none() || (self.surface_is_temporary && self.data.is_some()) {
             if let Some(data) = self.data.take() {
                 let stride = cairo_format_stride_for_width(Format::ARgb32, self.width);
                 let isurface = ImageSurface::create_for_data(
                     data, |box_u8| { }, Format::ARgb32, self.width, self.height, stride);
                 self.surface = Some(isurface);
+                self.surface_is_temporary = false;
             } else {
                 return None;
             }
@@ -634,6 +655,7 @@ impl Tile {
             data: None,
             surface: Some(isurface),
             surface_none: None,
+            surface_is_temporary: true,
             filepath: None,
             disk_usage: 0,
         }
@@ -645,7 +667,7 @@ impl Tile {
         if let Some(ref data) = self.data {
             u += data.len() as usize; // bytes
         }
-        if self.surface.is_some() {
+        if self.surface.is_some() && !self.surface_is_temporary {
             u += (self.width * self.height * 4) as usize; // RGBA assumed
         }
         u
@@ -655,6 +677,7 @@ impl Tile {
     fn flush(&mut self) {
         self.data = None;
         self.surface = None;
+        self.surface_is_temporary = false;
     }
 }
 
@@ -681,9 +704,17 @@ impl Eq for Tile {}
 impl fmt::Debug for Tile {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let data_state = {
-            if self.surface.is_some() { "surface" }
-            else if self.data.is_some() { "data" }
-            else { "empty" }
+            if self.surface.is_some() { 
+                if self.surface_is_temporary {
+                    "surface(tmp)" 
+                } else {
+                    "surface"
+                }
+            } else if self.data.is_some() { 
+                "data" 
+            } else { 
+                "empty" 
+            }
         };
         write!(f, "{{{},{} L{} {}x{} {} [{:?}]}}", 
             self.x, self.y, self.z, self.width, self.height, data_state, self.state)
@@ -1160,7 +1191,6 @@ impl TileRequestQueue {
         let mut mu = self.new_reqs_mutex.lock().unwrap();
         self.queue.insert(treq.clone());
         *mu = self.queue.len() as u32; // +1 can't work here because treqs can be equal
-        debug!("push_request: mu={} queue={} (after)", *mu, self.queue.len());
         assert!(*mu > 0);
         self.new_reqs_condvar.notify_one();
     }
@@ -1179,7 +1209,6 @@ impl TileRequestQueue {
         };
         self.queue.remove(&treq);
         assert_eq!(*mu, self.queue.len() as u32);
-        debug!("pull_request: mu={} queue={} (after)", *mu, self.queue.len());
         treq
     }
 }
@@ -1238,7 +1267,7 @@ impl TileSource {
             let url = self.make_url(&treq).unwrap();
             let mut data: Vec<u8> = Vec::new();
 
-            let mut expires = None; // False warning about never read (Rust 1.15 nightly)
+            let mut expires = None; // false warning (Rust 1.15 nightly at least)
             if url.starts_with("file:") {
                 // Load data from local disk 
                 return TileRequestResult::with_error(treq, 
