@@ -10,7 +10,11 @@
     "http://c.tile.openstreetmap.org/${z}/${x}/${y}.png"
   ],
   "token": "",
-  "copyright_text": "© OpenStreetMap contributors",
-  "copyright_url": "https://www.openstreetmap.org/copyright"
+  "copyrights": [
+    {
+      "text": "© OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright"
+    }
+  ]
 }
 

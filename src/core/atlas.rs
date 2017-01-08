@@ -248,10 +248,7 @@ pub struct Map {
     pub token: String,
     
     #[serde(default)]
-    pub copyright_text: String,
-    
-    #[serde(default)]
-    pub copyright_url: String,
+    pub copyrights: Vec<MapCopyright>,
 }
 
 impl Map {
@@ -265,8 +262,7 @@ impl Map {
             transparent: false,
             urls: Vec::new(),
             token: "".into(),
-            copyright_text: "".into(),
-            copyright_url: "".into(),
+            copyrights: Vec::new(),
         }
     }
     
@@ -315,6 +311,13 @@ impl PartialEq for Map {
 }
 
 impl Eq for Map {}
+
+/// Map copyright information.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MapCopyright {
+    pub text: String,
+    pub url: String,
+}
 
 // ---- MapView ------------------------------------------------------------------------------------
 
