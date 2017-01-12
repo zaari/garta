@@ -286,6 +286,13 @@ impl TileCache {
         }
     }
     
+/*    
+    /// Update generation and priority of the requests if its still on the queue.
+    pub fn reorder_request(&mut self, treqs: &BTreeSet<TileRequest>) {
+        self.tile_request_queue.write().unwrap().reorder_request(&treqs);
+    }
+*/    
+    
     /// Handle image fetch result from a worker thread. Returns true if the observer should be 
     /// notified.
     fn handle_result(&mut self, treq_result: &TileRequestResult) -> bool {
@@ -1374,6 +1381,24 @@ impl TileRequestQueue {
             None
         }
     }
+
+/*
+    /// Update generation and priority of the request if its still on the queue.
+    pub fn reorder_request(&mut self, new_treq: &BTreeSet<TileRequest>) {
+        let mut mu = self.new_reqs_mutex.lock().unwrap();
+        let new_key = new_treq.to_key();
+        let mut modified = false;
+        
+        // Find the request
+        for treq in self.queue.iter_mut() {
+            if treq.to_key() == new_key {
+                treq.generation = new_treq.generation;
+                treq.priority = new_treq.priority;
+                modified = true;
+            }
+        }
+    }
+*/    
 }
 
 impl fmt::Debug for TileRequestQueue {

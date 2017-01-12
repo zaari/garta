@@ -4,6 +4,10 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- Clicking copyright texts opens the related url in a browser
+
 ## [0.0.5]
 ### Added
 - Map scrolling and zooming

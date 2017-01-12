@@ -26,6 +26,7 @@ use log::LogLevel::Debug;
 use std::time::{Instant, Duration};
 use self::gtk::prelude::*;
 use std::collections::{BTreeSet};
+use std::process;
 
 use super::mainwindow::{MapWindow};
 use core::tiles::*;
@@ -161,11 +162,11 @@ impl MapCanvas {
                     if map.dark {
                         ft.fg_rgba = (1.0, 1.0, 1.0, 1.0);
                         ft.bg_rgba = (0.0, 0.0, 0.0, 0.3);
-                        ft.highlight_rgba = (0.6, 0.8, 1.0, 1.0);
+                        ft.highlight_rgba = (0.0, 0.0, 1.0, 1.0);
                     } else {
                         ft.fg_rgba = (0.0, 0.0, 0.0, 1.0);
                         ft.bg_rgba = (1.0, 1.0, 1.0, 0.3);
-                        ft.highlight_rgba = (0.6, 0.8, 1.0, 1.0);
+                        ft.highlight_rgba = (0.0, 0.0, 1.0, 1.0);
                     }
                     
                     self.float_texts_se.borrow_mut().push(ft);
@@ -175,6 +176,28 @@ impl MapCanvas {
             }
         } else {
             warn!("No map_win");
+        }
+    }
+
+    /// Calls 'matching' function if the pixel pos is in the floating text 
+    /// and 'non_matching' if not.
+    fn map_floating_text<F, G>(&self, pos: PixelPos, mut matching: F, mut non_matching: G) 
+        where F: FnMut(&mut FloatingText), G: FnMut(&mut FloatingText),
+    {
+        // Iterate southeast texts
+        for mut ft in self.float_texts_se.borrow_mut().iter_mut() {
+            let contains = {
+                if let Some(ref geometry) = ft.geometry {
+                    geometry.contains(pos)
+                } else {
+                    false
+                }
+            };
+            if contains {
+                matching(&mut ft);
+            } else {
+                non_matching(&mut ft);
+            }
         }
     }
 
@@ -289,7 +312,7 @@ impl MapCanvas {
                     for float_text in self.float_texts_se.borrow_mut().iter_mut() {
                         // Draw the text
                         float_text.pivot = PixelPos::new(-float_text.margin - margin, ty);
-                        float_text.draw(c, PixelPos::new(vw, vh), false);
+                        float_text.draw(c, PixelPos::new(vw, vh));
                         ty -= float_text.font_size + 2 * float_text.margin + margin;
                     }
                 } else {
@@ -335,6 +358,21 @@ impl MapCanvas {
             
             // Either end the drag, scrolling or just keep the selection
             debug!("map_window: {}", map_win.map_view.borrow().zoom_level);
+
+            // Open a url if one of the floating texts is clicked.
+            let url: RefCell<Option<String>> = RefCell::new(None);
+            self.map_floating_text(pos, 
+                { |ft| { *url.borrow_mut() = ft.url.clone(); } }, 
+                { |ft| { } }) ;
+            if let Some(ref url) = url.into_inner() {
+                info!("Opening url: {}", url);
+                match process::Command::new("xdg-open").arg(url).spawn() {
+                    Ok(child) => { }
+                    Err(e) => {
+                        error!("Failed to open the url: {}", e);
+                    }
+                }
+            }
         }
         *self.mode.borrow_mut() = MapCanvasMode::Void;
     }
@@ -342,7 +380,7 @@ impl MapCanvas {
     /// Event handler for mouse motion. Either drag or scroll.
     fn motion_notify_event(&self, ev: &gdk::EventMotion) {
         if let Some(ref map_win) = self.map_win {
-            let mut update_map = false;
+            let update_map = RefCell::new(false);
             let pos = PixelPos::new_with_f64_tuple(ev.get_position());
             match *self.mode.borrow() {
                 MapCanvasMode::Void => {
@@ -350,6 +388,22 @@ impl MapCanvas {
                     let focus = self.position_to_location(pos);
                     map_win.map_view.borrow_mut().focus = focus;
                     map_win.update_coordinates_button(focus, *self.accuracy.borrow());
+                    
+                    // Check for possible hover highlight
+                    self.map_floating_text(pos, 
+                        { |ft| {
+                            if !ft.highlight && ft.url.is_some() {
+                                debug!("Highlight: {}", ft.text);
+                                ft.highlight = true;
+                                *update_map.borrow_mut() = true;
+                            }
+                        } }, 
+                        { |ft| {
+                            if ft.highlight {
+                                ft.highlight = false;
+                                *update_map.borrow_mut() = true;
+                            }
+                        } }) ;
                 },
                 MapCanvasMode::Moving => {
                 }
@@ -365,7 +419,7 @@ impl MapCanvas {
                         map_win.map_view.borrow_mut().center = new_center;
 
                         // Request a map update                        
-                        update_map = true;
+                        *update_map.borrow_mut() = true;
                     }
                     
                     //let self.location_to_position();
@@ -374,7 +428,8 @@ impl MapCanvas {
                 _ => { }
             }
 
-            if update_map {
+            // Request map update if needed.
+            if *update_map.borrow() == true {
                 map_win.update_map();
             }
         }

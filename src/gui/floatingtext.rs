@@ -67,6 +67,9 @@ pub struct FloatingText {
     
     /// Margin between the text and the background rectangle.
     pub margin: i64,
+    
+    /// If true the text will be highlighted during the next call of 'draw' method.
+    pub highlight: bool,
 
     /// Set by the draw method.
     pub geometry: Option<PixelBox>,
@@ -88,6 +91,7 @@ impl FloatingText {
             highlight_rgba: (0.6, 0.8, 1.0, 1.0),
             font_size: 12,
             margin: 3,
+            highlight: false,
             geometry: None,
             baseline_offset: None,
         }
@@ -103,7 +107,7 @@ impl FloatingText {
     }
     
     /// Called by canvas draw method.
-    pub fn draw(&mut self, c: &cairo::Context, offset: PixelPos, highlight: bool) {
+    pub fn draw(&mut self, c: &cairo::Context, offset: PixelPos) {
         // Choose font
         c.select_font_face("sans-serif", cairo::FontSlant::Normal, cairo::FontWeight::Normal);
         c.set_font_size(self.font_size as f64);
@@ -136,7 +140,7 @@ impl FloatingText {
         let geometry = PixelBox::new(
             PixelPos::new(bx, by), 
             PixelPos::new(bx + ext.width as i64 + 2 * margin, by + ext.height as i64 + 2 * margin));
-        self.geometry = Some(geometry - offset);
+        self.geometry = Some(geometry);
         self.baseline_offset = Some(margin + font_ext.height as i64);
         
         // Draw a background box
@@ -153,7 +157,19 @@ impl FloatingText {
 */
         
         // Draw text
-        c.set_source_rgba(self.fg_rgba.0, self.fg_rgba.1, self.fg_rgba.2, self.fg_rgba.3);
+        if self.highlight {
+            c.set_source_rgba(
+                    self.highlight_rgba.0, 
+                    self.highlight_rgba.1, 
+                    self.highlight_rgba.2, 
+                    self.highlight_rgba.3);
+        } else {
+            c.set_source_rgba(
+                    self.fg_rgba.0, 
+                    self.fg_rgba.1, 
+                    self.fg_rgba.2, 
+                    self.fg_rgba.3);
+        }
         c.move_to(tx as f64, ty as f64);
         c.show_text(self.text.as_str());
     }
