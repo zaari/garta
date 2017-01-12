@@ -71,6 +71,9 @@ pub struct Settings {
     
     /// Map window position and size.
     pub main_window_geometry: String,
+    
+    /// The command which is used to launch an external web browser.
+    pub browser_command: String,
 }
 
 impl Settings {
@@ -88,6 +91,7 @@ impl Settings {
             tile_mem_cache_capacity: Some(10 * 1024 * 1024),
             tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
+            browser_command: "xdg-open".into(),
         }
     }
 

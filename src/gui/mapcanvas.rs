@@ -32,6 +32,7 @@ use super::mainwindow::{MapWindow};
 use core::tiles::*;
 use geocoord::geo::{PixelPos, Location};
 use gui::floatingtext::*;
+use core::settings::{settings_read};
 
 pub enum MapCanvasMode {
     /// Waiting for user action passively.
@@ -366,7 +367,7 @@ impl MapCanvas {
                 { |ft| { } }) ;
             if let Some(ref url) = url.into_inner() {
                 info!("Opening url: {}", url);
-                match process::Command::new("xdg-open").arg(url).spawn() {
+                match process::Command::new(&settings_read().browser_command).arg(url).spawn() {
                     Ok(child) => { }
                     Err(e) => {
                         error!("Failed to open the url: {}", e);
@@ -393,7 +394,6 @@ impl MapCanvas {
                     self.map_floating_text(pos, 
                         { |ft| {
                             if !ft.highlight && ft.url.is_some() {
-                                debug!("Highlight: {}", ft.text);
                                 ft.highlight = true;
                                 *update_map.borrow_mut() = true;
                             }
