@@ -27,12 +27,11 @@ mod gui;
 mod geocoord;
 
 use std::cell::{RefCell};
-use std::rc::{Rc};
 use std::process::{exit};
 
 use core::settings::{settings_write, settings_read};
 use core::tiles::{create_tile_cache};
-use core::atlas::{Atlas, Layer, Map, MapView};
+use core::atlas::{Atlas, Layer, Map, MapToken, MapView};
 use core::persistence::*;
 
 fn main() {
@@ -49,51 +48,67 @@ fn main() {
     
     // Initialize tile cache
     info!("Initialize tile cache");
-    let tcache = create_tile_cache();
+    let tcache_rrc = create_tile_cache();
 
     // Create atlas
-    let atlas = Rc::new(RefCell::new(Atlas::new("unnamed".into())));
+    let atlas = RefCell::new(Atlas::new("unnamed".into()));
     
     // Load maps from JSON files
     info!("Loading map files");
     for dir_name in vec![settings_read().host_maps_directory(), settings_read().user_maps_directory()] {
         match deserialize_all(dir_name, |map: Map, file_stem: &String| {
-            let mut a = atlas.borrow_mut();
             debug!("Loaded map {} ({})", map.name, file_stem);
-            a.maps.insert(map.slug.clone(), map);
+            atlas.borrow_mut().maps.insert(map.slug.clone(), map);
         }) {
             Ok(()) => { }
             Err(e) => { warn!("Failed to load map: {}", e); }
+        }
+    }
+    
+    // Load tokens
+    for dir_name in vec![settings_read().host_tokens_directory(), settings_read().user_tokens_directory()] {
+        match deserialize_all(dir_name, |token: MapToken, file_stem: &String| {
+            debug!("Loaded token {}", file_stem);
+            atlas.borrow_mut().tokens.insert(file_stem.clone(), token);
+        }) {
+            Ok(()) => { }
+            Err(e) => { warn!("Failed to load token: {}", e); }
         }
     }
 
     // Hard-coded sample layers
     debug!("Creating sample layers");
     {    
-        let mut a = atlas.borrow_mut();
-        let l0 = Layer::new("Backdrop".into(), 0); a.layers.insert(l0.id(), l0);
-        let l1 = Layer::new("Layer 1".into(), 1); a.layers.insert(l1.id(), l1);
-        let l2 = Layer::new("Layer 2".into(), 2); a.layers.insert(l2.id(), l2);
-        let l3 = Layer::new("Layer 3".into(), 3); a.layers.insert(l3.id(), l3);
+        let l0 = Layer::new("Backdrop".into(), 0); atlas.borrow_mut().layers.insert(l0.id(), l0);
+        let l1 = Layer::new("Layer 1".into(), 1); atlas.borrow_mut().layers.insert(l1.id(), l1);
+        let l2 = Layer::new("Layer 2".into(), 2); atlas.borrow_mut().layers.insert(l2.id(), l2);
+        let l3 = Layer::new("Layer 3".into(), 3); atlas.borrow_mut().layers.insert(l3.id(), l3);
+    }
+
+    // Load map view
+    let map_view = RefCell::new(MapView::restore());
+    if map_view.borrow().map_slug == "" {
+        map_view.borrow_mut().map_slug = "osm-carto".into(); // TODO: better validation
     }
 
     // Open GUI
     info!("Showing the main window");
-    let map_view = Rc::new(RefCell::new(MapView::new()));
-    map_view.borrow_mut().map_slug = "osm-carto".into();
-    let main_window = Rc::new(RefCell::new(gui::MapWindow::new(atlas, map_view, tcache.clone())));
-    tcache.borrow_mut().observer = Some(main_window.clone());
-    match main_window.borrow_mut().init() {
+    let main_window_r = gui::MapWindow::new_rc(atlas, map_view, tcache_rrc.clone());
+    match main_window_r.init(main_window_r.clone()) {
         Ok(()) => { },
-        Err(e) => { error!("Failed to open the main window: {}", e); },
+        Err(e) => { error!("Failed to open the main window: {}", e); exit(1); },
     }
+    tcache_rrc.borrow_mut().observer = Some(main_window_r.clone());
 
     // Main loop
     info!("Starting the main loop");
     gui::main();
+
+    // Save map view
+    main_window_r.map_view.borrow().store();
     
     // Cleanup
-    tcache.borrow_mut().store();
+    tcache_rrc.borrow_mut().store();
     info!("Exit");
 }
 

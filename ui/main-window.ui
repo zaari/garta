@@ -61,7 +61,7 @@
         <child>
           <object class="GtkBox" id="map_box">
             <property name="visible">True</property>
-            <property name="orientation">vertical</property>
+            <property name="orientation">horizontal</property>
           </object>
           <packing>
             <property name="expand">True</property>

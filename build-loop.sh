@@ -10,11 +10,6 @@
 # Some statistics
 find src -name "*.rs" | xargs wc -l
 
-# Cargo update
-if test "`find Cargo.lock -mtime +7`" ; then
-  cargo update
-fi
-
 # The initial build
 cargo test
 

@@ -4,10 +4,11 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.0.5]
 ### Added
+- Map scrolling and zooming
 - Tile cache
-- Persistence module
+- Data persistence
 - Map loading from JSON files
 
 ## [0.0.4] - 2016-12-29

@@ -8,6 +8,8 @@ This is the development roadmap which is subject to change depending on the phas
 - map implemented with basic scrolling and zooming support
 - maps have the required copyright information and the related clickable urls visible
 - view-related persistence 
+- smooth zooming
+- scrolling inertia
 
 ## Version 0.2
 - GPX loading
@@ -31,8 +33,6 @@ This is the development roadmap which is subject to change depending on the phas
 - drag & drop
 
 ## Version 0.6
-- smooth zooming
-- scrolling inertia
 - maps dialog
 
 ## Version 0.7

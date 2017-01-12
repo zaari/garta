@@ -57,6 +57,12 @@ pub struct Settings {
     // HTTP read timeout when fetching tiles from network sources.
     pub tile_read_timeout: u64,
     
+    // HTTP write timeout when sendinf requests.
+    pub tile_write_timeout: u64,
+    
+    /// Number of times to try reloading HTTP resources.
+    pub http_retry_count: u8,
+    
     // Tile memory cache size in bytes. If no limits are wanted this value should be set to None.
     pub tile_mem_cache_capacity: Option<usize>,
     
@@ -76,7 +82,9 @@ impl Settings {
             config_directory: "~/.config/garta".to_string(),
             cache_directory: "~/.cache/garta".to_string(),
             worker_threads: -1,
-            tile_read_timeout: 10,
+            tile_read_timeout: 20,
+            tile_write_timeout: 10,
+            http_retry_count: 3,
             tile_mem_cache_capacity: Some(10 * 1024 * 1024),
             tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
@@ -102,10 +110,25 @@ impl Settings {
     pub fn user_maps_directory(&self) -> path::PathBuf { 
         let mut pb = string_to_path(&self.config_directory); pb.push("maps"); pb 
     }
+
+    /// Get host-wide tokens directory
+    pub fn host_tokens_directory(&self) -> path::PathBuf { 
+        let mut pb = string_to_path(&self.host_data_directory); pb.push("tokens"); pb 
+    }
+    
+    /// Get user's tokens directory
+    pub fn user_tokens_directory(&self) -> path::PathBuf { 
+        let mut pb = string_to_path(&self.config_directory); pb.push("tokens"); pb 
+    }
     
     /// Get settings filename
     pub fn settings_file(&self) -> path::PathBuf { 
         let mut pb = string_to_path(&self.config_directory); pb.push("settings"); pb 
+    }
+    
+    /// Get mapview filename
+    pub fn mapview_file(&self) -> path::PathBuf { 
+        let mut pb = string_to_path(&self.config_directory); pb.push("map-view"); pb 
     }
     
     /// Get cache directory
@@ -129,6 +152,7 @@ impl Settings {
         let dirs = vec![
             self.project_directory().clone(), 
             self.user_maps_directory().clone(), 
+            self.user_tokens_directory().clone(), 
             self.cache_directory().clone(),
         ];
         for dir_name in dirs {

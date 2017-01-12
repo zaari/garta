@@ -9,7 +9,6 @@
     "http://b.tile.openstreetmap.org/${z}/${x}/${y}.png",
     "http://c.tile.openstreetmap.org/${z}/${x}/${y}.png"
   ],
-  "token": "",
   "copyrights": [
     {
       "text": "© OpenStreetMap contributors",

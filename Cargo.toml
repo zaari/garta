@@ -1,14 +1,14 @@
 [package]
 name = "garta"
 description = "Garta is going to be a GPX viewer, analyzer and editor for GTK3"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [build-dependencies]
 serde_codegen = "0.8"
 
 [dependencies]
-regex       = "0.1" # "0.2"
+regex       = "0.1" # TODO: "0.2"
 chrono      = "0.2"
 rand        = "0.3"
 hyper       = "0.9"

@@ -123,7 +123,7 @@ pub struct TileCache {
     tile_request_queue: Arc<RwLock<TileRequestQueue>>,
 
     /// Object to be notified when new tiles are ready.    
-    pub observer: Option<Rc<RefCell<TileObserver>>>,
+    pub observer: Option<Rc<TileObserver>>,
     
     /// Memory used by the cached tiles
     mem_usage: usize,
@@ -214,6 +214,9 @@ impl TileCache {
                     }
                     TileState::Error => {
                     }
+                    TileState::NonExistent => {
+                        // TODO: what kind of tile do we return?
+                    }
                     TileState::Flushed => {
                         debug!("Reloading a flushed tile: {}", tile_key);
                         tile.state = TileState::Pending;
@@ -245,6 +248,11 @@ impl TileCache {
                 Some(tile)
             }
         } else {
+            // If the coordinates are out of bounds, return an empty tile
+            if treq.y < 0 || treq.y >= (1 << treq.z) {
+                return None;
+            }
+        
             // Enqueue the request and create a new empty tile
             debug!("Requesting a new tile: {}", tile_key);
             self.tile_request_queue.write().unwrap().push_request(treq);
@@ -278,51 +286,103 @@ impl TileCache {
         }
     }
     
-    /// Handle image fetch result from a worker thread.
-    fn handle_result(&mut self, treq_result: &TileRequestResult) {
+    /// Handle image fetch result from a worker thread. Returns true if the observer should be 
+    /// notified.
+    fn handle_result(&mut self, treq_result: &TileRequestResult) -> bool {
         // Assign tile information
         if let Some(ref mut tile) = self.tiles.get_mut(&treq_result.to_key()) {
-            let old_mem_usage = tile.estimate_mem_usage();
-        
-            // Assign tile data
-            let treq = &treq_result.request;
-            let old_tile_disk_usage = tile.disk_usage;
-            tile.state = treq.tile_state_on_success;
-            tile.data = Some(treq_result.data.clone());
-            tile.width = treq_result.tile_width;
-            tile.height = treq_result.tile_height;
-            tile.expire_time = {
-                if let Some(treq_expire_time) = treq_result.expire_time {
-                    treq_expire_time
-                } else {
-                    tile.expire_time
-                }
-            };
-            tile.filepath = {
-                match treq_result.request.to_cache_path() 
-                    { Ok(pathbuf) => { Some(pathbuf) }, Err(e) => { None } }
-            };
-            tile.disk_usage = {
-                if let Some(ref img_data) = treq_result.img_data { img_data.len() } else { 0 }
-            } as u64;
-            self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - old_mem_usage;
-            self.disk_usage = self.disk_usage + tile.disk_usage - old_tile_disk_usage
+            match treq_result.code {
+                TileRequestResultCode::Ok => {
+                    let old_mem_usage = tile.estimate_mem_usage();
+                
+                    // Assign tile data
+                    let treq = &treq_result.request;
+                    let old_tile_disk_usage = tile.disk_usage;
+                    tile.state = treq.tile_state_on_success;
+                    tile.data = Some(treq_result.data.clone());
+                    tile.width = treq_result.tile_width;
+                    tile.height = treq_result.tile_height;
+                    tile.expire_time = {
+                        if let Some(treq_expire_time) = treq_result.expire_time {
+                            treq_expire_time
+                        } else {
+                            tile.expire_time
+                        }
+                    };
+                    tile.filepath = {
+                        match treq_result.request.to_cache_path() 
+                            { Ok(pathbuf) => { Some(pathbuf) }, Err(e) => { None } }
+                    };
+                    tile.disk_usage = {
+                        if let Some(ref img_data) = treq_result.img_data { img_data.len() } else { 0 }
+                    } as u64;
+                    self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - old_mem_usage;
+                    self.disk_usage = self.disk_usage + tile.disk_usage - old_tile_disk_usage
+                },
+                TileRequestResultCode::TransmissionError => {
+                    let mut treq = treq_result.request.clone();
+                    treq.generation = 0;
+                    treq.priority = 0;
+                    if let Some(retry) = treq.retry_count {
+                        if retry > 0 {
+                            treq.retry_count = Some(retry - 1);
+                            treq.priority = (retry - 1) as i64;
+                            self.tile_request_queue.write().unwrap().push_request(&treq);
+                            debug!("Retrying loading tile {} ({} tries left)", treq.to_key(), retry - 1);
+                        } else {
+                            // FAIL
+                            tile.state = TileState::Error;
+                            warn!("Failed to load tile {} after several retries", treq.to_key());
+                            return false;
+                        }
+                    } else {
+                        let retry_count = settings_read().http_retry_count;
+                        treq.retry_count = Some(retry_count);
+                        treq.priority = retry_count as i64;
+                        self.tile_request_queue.write().unwrap().push_request(&treq);
+                        debug!("Retrying tile {} loading for {} times", treq.to_key(), retry_count);
+                    }
+                    return false;
+                },
+                TileRequestResultCode::NotFoundError => {
+                    tile.state = TileState::NonExistent;
+                    tile.paint_with_color(0.4, 0.4, 0.4);
+                    return false;
+                },
+                TileRequestResultCode::NoSourceError => {
+                    tile.state = TileState::NonExistent;
+                    tile.paint_with_color(0.5, 0.0, 0.0);
+                    return false;
+                },
+                TileRequestResultCode::UnknownError => {
+                    tile.state = TileState::Error;
+                    tile.paint_with_color(0.7, 0.0, 0.8);
+                    return false;
+                },
+            }
         } else {
             warn!("Received image data fetch for tile {} but tile isn't in cache!", 
                 treq_result.to_key());
         }
-        
+
+/*
         // Mem-flush a tile which would expire the soonest
+        // FIXME: analyze access times
         if let Some(mem_capacity) = settings_read().tile_mem_cache_capacity {
-            while self.mem_usage > mem_capacity && !self.tiles.is_empty() {
-                // Flush the soonest-to-expire tile
-                if let Some((ref tile_id, ref mut tile)) = self.tiles.iter_mut().next() {
+            if self.mem_usage > mem_capacity {
+                let ref mut tiles = self.tiles;
+                for (ref tile_id, ref mut tile) in tiles.iter_mut() {
+                    if self.mem_usage <= mem_capacity {
+                        break;
+                    }
+
                     let tmu0 = tile.estimate_mem_usage();
                     tile.flush();
                     self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - tmu0;
                 }
             }
         }
+*/        
         
         // Disk-flush a tile which would expire the soonest
         if let Some(disk_capacity) = settings_read().tile_disk_cache_capacity {
@@ -377,8 +437,9 @@ impl TileCache {
                     }
                 }
             }
+            return true;
         }
-        
+        return false;
     }
 
     /// Save cache state to disk. Typically this is called before the application is closed.
@@ -495,8 +556,11 @@ pub enum TileState {
     /// Content ready for use.
     Ready,
     
-    /// Content loading resulted an error.
+    /// Content loading resulted an error which is irrecovable.
     Error,
+    
+    /// The tile doesn't exist on the source or the source doesn't exist.
+    NonExistent,
     
     /// Content was removed from RAM but may be found on disk.
     Flushed,
@@ -509,10 +573,10 @@ pub struct Tile {
     pub state: TileState,
 
     /// x coordinate (range is 0..2^z)
-    x: u32,
+    x: i64,
     
     /// y coordinate (range is 0..2^z)
-    y: u32,
+    y: i64,
     
     /// zoom level
     z: u8,
@@ -561,7 +625,7 @@ impl Tile {
     /// Constructor from TileRequest.
     pub fn new_with_request(treq: &TileRequest) -> Tile {
         Tile{ state: TileState::Pending, 
-              x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
+              x: treq.wrap_x(), y: treq.y, z: treq.z, mult: treq.mult, 
               width: treq.source.tile_width, 
               height: treq.source.tile_width,
               access_time: UTC::now(),
@@ -580,7 +644,7 @@ impl Tile {
         // Return tile        
         let mut tile = Tile { 
             state: TileState::Pending, 
-            x: treq.x, y: treq.y, z: treq.z, mult: treq.mult, 
+            x: treq.wrap_x(), y: treq.y, z: treq.z, mult: treq.mult, 
             width: treq.source.tile_width, 
             height: treq.source.tile_height,
             access_time: UTC::now(),
@@ -616,8 +680,8 @@ impl Tile {
     }
 
     // Getters   
-    pub fn x(&self) -> u32 { self.x }
-    pub fn y(&self) -> u32 { self.y }
+    pub fn x(&self) -> i64 { self.x }
+    pub fn y(&self) -> i64 { self.y }
     pub fn z(&self) -> u8 { self.z }
     pub fn mult(&self) -> u8 { self.mult }
     pub fn width(&self) -> i32 { self.width }
@@ -698,6 +762,7 @@ impl Tile {
         self.data = None;
         self.surface = None;
         self.surface_is_temporary = false;
+        self.state = TileState::Flushed;
     }
 }
 
@@ -758,54 +823,72 @@ pub struct TileRequest {
     generation: u64,
 
     /// Priority within the generation. Affects to the order in the request queue.
-    priority: u16,
+    priority: i64,
     
     /// X-position
-    x: u32,
+    pub x: i64,
     
     /// Y-position
-    y: u32,
+    pub y: i64,
     
     /// Zoom level
-    z: u8,
+    pub z: u8,
     
     /// High-dpi multiplier, usually 1
-    mult: u8,
+    pub mult: u8,
 
     /// Source where tiles are loaded.
-    source: TileSource,    
+    pub source: TileSource,    
     
     /// Load tile from the source even if it was found in disk cache.
     tile_fetch_mode: TileFetchMode,
     
     /// Tile state to be set if tile fetching succeeds.
     tile_state_on_success: TileState,
+    
+    /// Retry count. This is decreased every time when retried.
+    retry_count: Option<u8>,
 }
 
 impl TileRequest {
     /// Constructor for a tile request.
-    pub fn new(generation: u64, priority: u16, x: u32, y: u32, z: u8, mult: u8, source: TileSource) -> TileRequest {
+    pub fn new(generation: u64, priority: i64, x: i64, y: i64, z: u8, mult: u8, source: TileSource) -> TileRequest {
         TileRequest {
             generation: generation, priority: priority, 
             x: x, y: y, z: z, mult: mult,
             source: source,
             tile_fetch_mode: TileFetchMode::Any,
             tile_state_on_success: TileState::Ready,
+            retry_count: None,
         }
+    }
+    
+    /// If x is out of bounds wrap it.
+    pub fn wrap_x(&self) -> i64 {
+        let mut x = self.x;
+        let w = 1 << self.z;
+        while x < 0 {
+            x += w;
+        }
+        if x >= w {
+            x = x % w;
+        }
+        x
     }
     
     /// Unique key of this tile
     fn to_key(&self) -> String {
-        format!("{}/{}/{}/{}@{}", self.source.slug, self.z, self.y, self.x, self.mult)
+        format!("{}/{}/{}/{}@{}", self.source.slug, self.z, self.y, self.wrap_x(), self.mult)
     }
 
     /// Returns a copy of this with zoom level decreased and the (x,y) adjusted according to that.
     fn zoom_out(&self) -> TileRequest {
         TileRequest {
-            generation: self.generation, priority: self.priority, 
-            x: self.x / 2, y: self.y / 2, z: self.z - 1, mult: self.mult,
+            generation: self.generation, priority: self.priority,
+            x: self.wrap_x() / 2, y: self.y / 2, z: self.z - 1, mult: self.mult,
             source: self.source.clone(), tile_fetch_mode: self.tile_fetch_mode,
             tile_state_on_success: TileState::Ready,
+            retry_count: None,
         }
     }
 
@@ -821,20 +904,20 @@ impl TileRequest {
         // X and Y coordinate parts (max 256 items per subdirectory)
         if self.z <= 4 {
             fs::create_dir_all(&cache_path)?;
-            cache_path.push(format!("{},{}", self.y, self.x));
+            cache_path.push(format!("{},{}", self.y, self.wrap_x()));
         } else if self.z <= 8 {
             cache_path.push(self.y.to_string());
             fs::create_dir_all(&cache_path)?;
             cache_path.push(self.x.to_string());
         } else if self.z <= 16 {
-            let name = format!("{:4x}{:4x}", self.y, self.x);
+            let name = format!("{:4x}{:4x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
             cache_path.push(name[4..6].to_string());
             fs::create_dir_all(&cache_path)?;
             cache_path.push(name[6..8].to_string());
         } else if self.z <= 24 {
-            let name = format!("{:6x}{:6x}", self.y, self.x);
+            let name = format!("{:6x}{:6x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
             cache_path.push(name[4..8].to_string());
@@ -842,7 +925,7 @@ impl TileRequest {
             fs::create_dir_all(&cache_path)?;
             cache_path.push(name[10..12].to_string());
         } else {
-            let name = format!("{:8x}{:8x}", self.y, self.x);
+            let name = format!("{:8x}{:8x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
             cache_path.push(name[4..6].to_string());
@@ -878,10 +961,23 @@ impl TileRequest {
 }
 
 impl Ord for TileRequest {
+    /// Compare tile requests based on generation, priority and other distinctive values.
     fn cmp(&self, other: &TileRequest) -> Ordering {
         if self.generation == other.generation {
             if self.priority == other.priority {
-                self.tile_fetch_mode.cmp(&other.tile_fetch_mode)
+                if self.z == other.z {
+                    if self.y == other.y {
+                        if self.wrap_x() == other.wrap_x() {
+                            self.tile_fetch_mode.cmp(&other.tile_fetch_mode)
+                        } else {
+                            self.wrap_x().cmp(&other.wrap_x())
+                        }
+                    } else {
+                        self.y.cmp(&other.y)
+                    }
+                } else {
+                    self.z.cmp(&other.z)
+                }
             } else {
                 self.priority.cmp(&other.priority)
             }
@@ -914,15 +1010,27 @@ impl fmt::Debug for TileRequest {
                 TileFetchMode::Remote => { " from-remote" }
             }
         };
-        write!(f, "{{{},{} L{} {}{}}}", self.x, self.y, self.z, self.source.slug, extra)
+        write!(f, "{{{},{} L{} {}{} gen={} pri={}}}", self.wrap_x(), self.y, self.z, self.source.slug, extra, self.generation, self.priority)
     }
 }
 
 // ---- TileRequestResult --------------------------------------------------------------------------
 
-// Tile request result containing image data. This object doesn't live long.
+/// Result codes of TileRequestResult. 
+#[derive(Copy, Clone, Serialize, Deserialize, Ord, PartialOrd, PartialEq, Eq, Debug)]
+pub enum TileRequestResultCode {
+    Ok,
+    TransmissionError,
+    NotFoundError,
+    NoSourceError,
+    UnknownError,
+}
+
+/// Tile request result containing image data. This object doesn't live long.
 #[derive(Clone)]
 struct TileRequestResult {
+    pub code: TileRequestResultCode,
+
     // The request resulting this instance.
     pub request: TileRequest,
 
@@ -938,9 +1046,6 @@ struct TileRequestResult {
     /// Tile height in pixels.
     pub tile_height: i32,
     
-    /// Error message
-    pub error: String,
-
     // The original image file data.
     img_data: Option<Vec<u8>>
 }
@@ -953,17 +1058,17 @@ impl TileRequestResult {
         match convert_image_to_buffer(img_data, &mut tile_width, &mut tile_height) {
             Ok(raw_data) => {
                 TileRequestResult {
+                    code: TileRequestResultCode::Ok,
                     request: treq.clone(),
                     expire_time: expires,
                     data: raw_data,
                     tile_width: tile_width,
                     tile_height: tile_height,
-                    error: "".into(),
                     img_data: Some(img_data.clone()),
                 }
             },
             Err(e) => {
-                return Self::with_error(treq, e.to_string());
+                return Self::with_code(treq, TileRequestResultCode::TransmissionError);
             }
         }
     }
@@ -985,12 +1090,12 @@ impl TileRequestResult {
         match convert_image_to_buffer(&mut img_data, &mut tile_width, &mut tile_height) {
             Ok(raw_data) => {
                 Ok(TileRequestResult {
+                    code: TileRequestResultCode::Ok,
                     request: treq.clone(),
                     expire_time: None,
                     data: raw_data,
                     tile_width: tile_width,
                     tile_height: tile_height,
-                    error: "".into(),
                     img_data: Some(img_data.clone()),
                 })
             },
@@ -1004,14 +1109,14 @@ impl TileRequestResult {
     }
     
     /// Error constructor.
-    fn with_error(treq: &TileRequest, err: String) -> TileRequestResult {
+    fn with_code(treq: &TileRequest, code: TileRequestResultCode) -> TileRequestResult {
         TileRequestResult {
+            code: code,
             request: treq.clone(),
             expire_time: None,
             data: Box::new([0u8]),
             tile_width: 0,
             tile_height: 0,
-            error: err,
             img_data: None,
         }
     }
@@ -1082,11 +1187,13 @@ fn receive_treq_result() -> glib::Continue {
                 match rx.try_recv() {
                     Ok(treq_result) => {
                         // Save tile data. We clone the tile to avoid a mutable borrow of TileCache.
-                        tcache.borrow_mut().handle_result(&treq_result);
+                        let notify = tcache.borrow_mut().handle_result(&treq_result);
                         
                         // Notify tile observer
-                        if let Some(observer) = tcache.borrow().observer.clone() {
-                            observer.borrow_mut().tile_loaded(&treq_result.request);
+                        if notify {
+                            if let Some(observer) = tcache.borrow().observer.clone() {
+                                observer.tile_loaded(&treq_result.request);
+                            }
                         }
                     },
                     Err(e) => { 
@@ -1119,6 +1226,8 @@ impl TileRequestQueue {
         let mut http_client = Client::new();
         http_client.set_read_timeout(
             Some(time::Duration::from_secs(settings_read().tile_read_timeout)));
+        http_client.set_write_timeout(
+            Some(time::Duration::from_secs(settings_read().tile_write_timeout)));
         let http_client_a = Arc::new(http_client);
         for i in 1..(n + 1) {
 
@@ -1134,7 +1243,8 @@ impl TileRequestQueue {
                     *g = Some(TileThreadGlobal{tile_cache: tcache_t, receivers: vec![rx]});
                 }
             });
-        
+
+            // Start the worker threads        
             let trqueue_t = self_ar.clone();
             let http_client_t = http_client_a.clone();
             let nt_m  = self.new_reqs_mutex.clone();
@@ -1149,71 +1259,77 @@ impl TileRequestQueue {
                         }
                     }
                     
-                    // Get the tile and start processing
+                    // Lock the queue to get the tile request
+                    let mut treq_o: Option<TileRequest> = None;
                     match trqueue_t.write() {
                         Ok(mut trqueue) => {
                             // Get the most urgent TileRequest
-                            if let Some(treq) = trqueue.pull_request() {
-                                debug!("worker thread loop: treq={:?}", treq);
+                            treq_o = trqueue.pull_request()
+                        }
+                        Err(e) => {
+                            warn!("Failed to unlock tile request queue: {}", e);
+                        }
+                    }
+
+                    // Start processing the request
+                    if let Some(treq) = treq_o {
+                        debug!("treq={:?} trq={:?}", treq, trqueue_t.read());
+                    
+                        // Load tile from tile cache
+                        let mut download_needed = treq.tile_fetch_mode != TileFetchMode::Cache;
+                        if treq.tile_exists_on_disk() {
+                            if treq.tile_fetch_mode != TileFetchMode::Remote {
+                                debug!("Tile {} exists on disk", treq.to_key());
                                 
-                                // Load tile from tile cache
-                                let mut download_needed = treq.tile_fetch_mode != TileFetchMode::Cache;
-                                if treq.tile_exists_on_disk() {
-                                    if treq.tile_fetch_mode != TileFetchMode::Remote {
-                                        debug!("Tile {} exists on disk", treq.to_key());
-                                        
-                                        // Load tile from file
-                                        match TileRequestResult::new_from_file(&treq) {
-                                            Ok(res) => {
-                                                // Notify TileCache about the loaded tile
-                                                glib::idle_add(receive_treq_result);
-                                                match tx.send(res) {
-                                                    Ok(()) => { }, 
-                                                    Err(e) => {
-                                                        panic!("Send to TileCache failed: {}", e);
-                                                    }
-                                                }
-                                                download_needed = false;
-                                            },
+                                // Load tile from file
+                                match TileRequestResult::new_from_file(&treq) {
+                                    Ok(res) => {
+                                        // Notify TileCache about the loaded tile
+                                        glib::idle_add(receive_treq_result);
+                                        match tx.send(res) {
+                                            Ok(()) => { }, 
                                             Err(e) => {
-                                                warn!("Failed to read tile from disk: {}", e);
+                                                panic!("Send to TileCache failed: {}", e);
                                             }
                                         }
-                                    } else {
-                                        debug!("Tile {} exists on disk but remote is forced", treq.to_key());
+                                        download_needed = false;
+                                    },
+                                    Err(e) => {
+                                        warn!("Failed to read tile from disk: {}", e);
                                     }
-                                } else {
-                                    debug!("Tile {} doesn't exists on disk", treq.to_key());
                                 }
-                                
-                                // Download the requested tile
-                                if download_needed {
-                                    let res = treq.source.fetch_tile_data(&treq, &http_client_t);
-                                
-                                    // Notify TileCache first
-                                    let res_cloned = res.clone();
-                                    glib::idle_add(receive_treq_result); // this has to be before the send and after the clone
-                                    match tx.send(res) {
-                                        Ok(()) => { }, 
-                                        Err(e) => {
-                                            panic!("Send to TileCache failed: {}", e);
-                                        }
-                                    }
-                                
-                                    // Save image data to disk cache 
-                                    match res_cloned.save_to_disk() {
-                                        Ok(()) => { 
-                                            debug!("Tile {} saved to disk cache", treq.to_key());
-                                        },
-                                        Err(e) => {
-                                            warn!("Failed to save the tile to disk: {}", e);
-                                        }
+                            } else {
+                                debug!("Tile {} exists on disk but remote is forced", treq.to_key());
+                            }
+                        } else {
+                            debug!("Tile {} doesn't exists on disk", treq.to_key());
+                        }
+                        
+                        // Download the requested tile
+                        if download_needed {
+                            let res = treq.source.fetch_tile_data(&treq, &http_client_t);
+                        
+                            // Notify TileCache first
+                            let res_cloned = res.clone();
+                            glib::idle_add(receive_treq_result); // this has to be before the send and after the clone
+                            match tx.send(res) {
+                                Ok(()) => { }, 
+                                Err(e) => {
+                                    panic!("Send to TileCache failed: {}", e);
+                                }
+                            }
+                        
+                            // Save image data to disk cache 
+                            if res_cloned.code == TileRequestResultCode::Ok {
+                                match res_cloned.save_to_disk() {
+                                    Ok(()) => { 
+                                        debug!("Tile {} saved to disk cache", treq.to_key());
+                                    },
+                                    Err(e) => {
+                                        warn!("Failed to save the tile to disk: {}", e);
                                     }
                                 }
                             }
-                        }
-                        Err(e) => {
-                            panic!("Failed to unlock tile request queue: {}", e);
                         }
                     }
                 }
@@ -1246,9 +1362,9 @@ impl TileRequestQueue {
             assert_eq!(*mu, self.queue.len() as u32);
             *mu -= 1;
 
-            // Return the first request
+            // Return the request with highest score
             let treq = { 
-                self.queue.iter().next().unwrap().clone()
+                self.queue.iter().last().unwrap().clone()
             };
             self.queue.remove(&treq);
             assert_eq!(*mu, self.queue.len() as u32);
@@ -1260,8 +1376,9 @@ impl TileRequestQueue {
     }
 }
 
-impl Drop for TileCache {
-    fn drop(&mut self) {
+impl fmt::Debug for TileRequestQueue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "queue.len={}", self.queue.len())
     }
 }
 
@@ -1314,11 +1431,10 @@ impl TileSource {
             let url = self.make_url(&treq).unwrap();
             let mut data: Vec<u8> = Vec::new();
 
-            let mut expires = None; // false warning (Rust 1.15 nightly at least)
+            let mut expires = None; // false warning (with Rust 1.15 nightly at least)
             if url.starts_with("file:") {
                 // Load data from local disk 
-                return TileRequestResult::with_error(treq, 
-                    "File system based tile sources are not supperted yet".into()); // TODO
+                return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError); // TODO
             } else {
                 // Request tile data from a remote server with GET
                 match client.get(url.as_str()).send() {
@@ -1342,24 +1458,28 @@ impl TileSource {
                                     }
                                 },
                                 Err(e) => {
-                                    error!("Failed to get tile from a remote server; {}", e);
-                                    return TileRequestResult::with_error(treq, e.to_string());
+                                    error!("Failed to read tile from a remote server; {}", e);
+                                    return TileRequestResult::with_code(treq, TileRequestResultCode::TransmissionError);
                                 }
                             }
+                        } else if response.status == StatusCode::NotFound {
+                            debug!("Tile not found on server");
+                            return TileRequestResult::with_code(treq, TileRequestResultCode::NotFoundError);
                         } else {
-                            return TileRequestResult::with_error(treq,
-                                    format!("HTTP GET returned status code {}", response.status));
+                            warn!("HTTP GET returned status code {}", response.status);
+                            return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError);
                         }
                     },
                     Err(e) => {
                         error!("Failed to get tile from a remote server; {}", e);
-                        return TileRequestResult::with_error(treq, e.to_string());
+                        return TileRequestResult::with_code(treq, 
+                            TileRequestResultCode::TransmissionError);
                     },
                 }
             }
             TileRequestResult::new(&treq, &mut data, expires)
         } else {
-            TileRequestResult::with_error(treq, "No source urls!".into())
+            TileRequestResult::with_code(treq, TileRequestResultCode::NoSourceError)
         }
     }
     
@@ -1368,7 +1488,7 @@ impl TileSource {
         if self.urls.len() > 0 {
             let index = rand::thread_rng().gen::<usize>() % self.urls.len();
             let url = self.urls.get(index).unwrap();
-            let url_with_vars = url.replace("${x}", &(format!("{}", treq.x).as_str()))
+            let url_with_vars = url.replace("${x}", &(format!("{}", treq.wrap_x()).as_str()))
                                    .replace("${y}", &(format!("{}", treq.y).as_str()))
                                    .replace("${z}", &(format!("{}", treq.z).as_str()))
                                    .replace("${token}", self.token.as_str());
@@ -1380,10 +1500,12 @@ impl TileSource {
     
     /// Returns the extension of image file ("jpg", "png", etc).
     fn to_filename_extension(&self) -> Option<String> {
+        /* Doesn't work with url parameters
         if let Some(ref url) = self.urls.get(0) {
             let n = url.len();
             return Some(url[(n - 3) .. n].into()); // TODO: smarter way
         }
+        */
         
         None
     }
@@ -1434,10 +1556,11 @@ fn convert_image_to_buffer(img_data: &mut Vec<u8>, width_out: &mut i32, height_o
 #[cfg(test)]
 mod tests {
     extern crate env_logger;
-    use std::sync::{Arc};
-    use super::hyper::{Client};
+    //use std::sync::{Arc};
+    //use super::hyper::{Client};
     use super::*;
 
+/*
     #[test]
     fn test_tile_source() {
         // Initialize logger
@@ -1472,7 +1595,19 @@ mod tests {
         let trr = tile_source.fetch_tile_data(&treq, &http_client_a);        
         assert!(trr.to_key() == treq.to_key());
         assert!(trr.data.len() > 4000);
-        assert!(trr.error.len() == 0);
+        assert!(trr.code == TileRequestResultCode::Ok);
+    }
+*/    
+    
+    #[test]
+    fn test_tile_request() {
+        let tile_source = TileSource::new("osm-carto".into(), Vec::new(), "".into(), 256,  256, );
+        assert_eq!(2, TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone()).wrap_x());
+        assert_eq!(3, TileRequest::new(1, 1, -1, 0, 2, 1, tile_source.clone()).wrap_x());
+        assert_eq!(0, TileRequest::new(1, 1, 0, 0, 2, 1, tile_source.clone()).wrap_x());
+        assert_eq!(0, TileRequest::new(1, 1, 4, 0, 2, 1, tile_source.clone()).wrap_x());
+        assert_eq!(1, TileRequest::new(1, 1, 5, 0, 2, 1, tile_source.clone()).wrap_x());
+        
     }
 }
 

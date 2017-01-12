@@ -19,11 +19,14 @@ extern crate serde_json;
 use std::collections::linked_list::LinkedList;
 use std::collections::{HashMap, BTreeSet, BTreeMap};
 use std::cmp::*;
+use std::path;
 
 use geocoord::geo::{Location, Projection};
 use core::elements::*;
 use core::id::{UniqueId};
 use core::tiles::{TileSource};
+use core::settings::{settings_read};
+use core::persistence::*;
 
 // ---- Atlas --------------------------------------------------------------------------------------
 
@@ -52,6 +55,9 @@ pub struct Atlas {
     
     /// Collection of maps.
     pub maps: BTreeMap<String, Map>,
+    
+    /// Tokens for maps.
+    pub tokens: HashMap<String, MapToken>,
 }
 
 impl Atlas {
@@ -67,6 +73,7 @@ impl Atlas {
             routes: HashMap::new(),
             areas: HashMap::new(),
             maps: BTreeMap::new(),
+            tokens: HashMap::new(),
         }    
     }
 
@@ -242,6 +249,9 @@ pub struct Map {
     pub transparent: bool,
 
     #[serde(default)]
+    pub dark: bool,
+
+    #[serde(default)]
     pub urls: Vec<String>,
     
     #[serde(default)]
@@ -260,6 +270,7 @@ impl Map {
             tile_width: None,
             tile_height: None,
             transparent: false,
+            dark: false,
             urls: Vec::new(),
             token: "".into(),
             copyrights: Vec::new(),
@@ -268,12 +279,22 @@ impl Map {
     
     /// Convert Map into a TileSource. It's required that tile width and height are available,
     /// and None will be returned if not.
-    pub fn to_tile_source(&self) -> Option<TileSource> {
+    pub fn to_tile_source(&self, tokens: &HashMap<String, MapToken>) -> Option<TileSource> {
+        // Interpret the token field either as a reference or a literal
+        let token = {
+            if let Some(token) = tokens.get(&self.token) {
+                token.value.clone()
+            } else {
+                self.token.clone()
+            }
+        };
+
+        // Build tile source
         if self.tile_width.is_some() && self.tile_height.is_some() {
             Some(TileSource {
                 slug: self.slug.clone(),
                 urls: self.urls.clone(),
-                token: self.token.clone(),
+                token: token,
                 tile_width: self.tile_width.unwrap(),
                 tile_height: self.tile_height.unwrap(),
             })
@@ -319,13 +340,31 @@ pub struct MapCopyright {
     pub url: String,
 }
 
+// ---- MapToken -----------------------------------------------------------------------------------
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MapToken {
+    pub value: String,
+}
+
+impl MapToken {
+    pub fn new(value: String) -> MapToken {
+        MapToken {
+            value: value,
+        }
+    }
+}
+
 // ---- MapView ------------------------------------------------------------------------------------
 
 /// Metadata about map window.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct MapView {
     /// Outline of the view area.
     pub center: Location,
+
+    /// The current focus location. This is affected by mouse pointed position.    
+    #[serde(skip_serializing, default)]
+    pub focus: Option<Location>,
 
     /// Zoom level of the view.
     pub zoom_level: u8,
@@ -338,17 +377,55 @@ pub struct MapView {
     
     /// Coordinates format used within the view.
     pub coordinates_format: String,
+    
+    /// Tile request generation.
+    #[serde(skip_serializing, default)]
+    pub request_generation: u64,
 }
 
 impl MapView {
     pub fn new() -> MapView {
         MapView {
             center: Location::new(0.0, 0.0),
+            focus: None,
             zoom_level: 3,
             visible_layer_ids: LinkedList::new(),
             map_slug: "".into(),
             coordinates_format: "dm".into(),
+            request_generation: 1,
         }
+    }
+    
+    /// Save state to disk.
+    pub fn store(&self) {
+        // Write to cache dir
+        let pathbuf = settings_read().mapview_file();
+        match serialize_to(self, pathbuf) {
+            Ok(()) => {
+                debug!("Map view stored successfully: {:?}", self);
+            },
+            Err(e) => {
+                warn!("Failed to store map view: {}", e);
+            }
+        }
+    }
+
+    /// Load state from disk.
+    pub fn restore() -> MapView {
+        // Read from cache dir
+        let pathbuf = settings_read().mapview_file();
+        if pathbuf.exists() {
+            match deserialize_from::<MapView, path::PathBuf>(pathbuf) {
+                Ok(map_view) => {
+                    debug!("Map view restored successfully");
+                    return map_view;
+                },
+                Err(e) => {
+                    warn!("Failed to restore map view: {}", e);
+                }
+            }
+        }
+        MapView::new()
     }
 }
 
