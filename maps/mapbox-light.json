@@ -1,0 +1,21 @@
+{
+  "slug": "mapbox-light",
+  "name": "MapBox Light",
+  "tile_width": 256,
+  "tile_height": 256,
+  "urls": [
+    "http://api.tiles.mapbox.com/v4/mapbox.light/${z}/${x}/${y}.jpg?access_token=${token}"
+  ],
+  "token": "mapbox",
+  "copyrights": [
+    {
+      "text": "© OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright"
+    },
+    {
+      "text": "© MapBox",
+      "url": "https://www.mapbox.com/about/maps"
+    }
+  ]
+}
+
