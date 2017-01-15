@@ -215,7 +215,8 @@ impl TileCache {
                     TileState::Error => {
                     }
                     TileState::NonExistent => {
-                        // TODO: what kind of tile do we return?
+                    }
+                    TileState::Unauthorized => {
                     }
                     TileState::Flushed => {
                         debug!("Reloading a flushed tile: {}", tile_key);
@@ -286,13 +287,6 @@ impl TileCache {
         }
     }
     
-/*    
-    /// Update generation and priority of the requests if its still on the queue.
-    pub fn reorder_request(&mut self, treqs: &BTreeSet<TileRequest>) {
-        self.tile_request_queue.write().unwrap().reorder_request(&treqs);
-    }
-*/    
-    
     /// Handle image fetch result from a worker thread. Returns true if the observer should be 
     /// notified.
     fn handle_result(&mut self, treq_result: &TileRequestResult) -> bool {
@@ -358,7 +352,12 @@ impl TileCache {
                 },
                 TileRequestResultCode::NoSourceError => {
                     tile.state = TileState::NonExistent;
-                    tile.paint_with_color(0.5, 0.0, 0.0);
+                    tile.paint_with_color(0.5, 0.4, 0.4);
+                    return false;
+                },
+                TileRequestResultCode::UnauthorizedError => {
+                    tile.state = TileState::Unauthorized;
+                    tile.paint_with_color(1.0, 0.9, 0.8);
                     return false;
                 },
                 TileRequestResultCode::UnknownError => {
@@ -383,9 +382,12 @@ impl TileCache {
                         break;
                     }
 
-                    let tmu0 = tile.estimate_mem_usage();
-                    tile.flush();
-                    self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - tmu0;
+                    // Flush only lower tiles
+                    if tile.z > 3 {
+                        let tmu0 = tile.estimate_mem_usage();
+                        tile.flush();
+                        self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - tmu0;
+                    }
                 }
             }
         }
@@ -568,6 +570,9 @@ pub enum TileState {
     
     /// The tile doesn't exist on the source or the source doesn't exist.
     NonExistent,
+
+    /// Tile source denied access.
+    Unauthorized,
     
     /// Content was removed from RAM but may be found on disk.
     Flushed,
@@ -1030,6 +1035,7 @@ pub enum TileRequestResultCode {
     TransmissionError,
     NotFoundError,
     NoSourceError,
+    UnauthorizedError,
     UnknownError,
 }
 
@@ -1381,24 +1387,6 @@ impl TileRequestQueue {
             None
         }
     }
-
-/*
-    /// Update generation and priority of the request if its still on the queue.
-    pub fn reorder_request(&mut self, new_treq: &BTreeSet<TileRequest>) {
-        let mut mu = self.new_reqs_mutex.lock().unwrap();
-        let new_key = new_treq.to_key();
-        let mut modified = false;
-        
-        // Find the request
-        for treq in self.queue.iter_mut() {
-            if treq.to_key() == new_key {
-                treq.generation = new_treq.generation;
-                treq.priority = new_treq.priority;
-                modified = true;
-            }
-        }
-    }
-*/    
 }
 
 impl fmt::Debug for TileRequestQueue {
@@ -1420,6 +1408,9 @@ pub struct TileSource {
     
     /// Token required by the service provider
     pub token: String,
+    
+    /// User agent header field to be used in HTTP requests. None results a default.
+    pub user_agent: Option<String>,
 
     /// Tile width which has to be known
     pub tile_width: i32,
@@ -1434,6 +1425,7 @@ impl TileSource {
             slug: slug,
             urls: urls,
             token: token,
+            user_agent: None,
             tile_width: tile_width,
             tile_height: tile_height,
         }
@@ -1461,8 +1453,16 @@ impl TileSource {
                 // Load data from local disk 
                 return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError); // TODO
             } else {
+                // Add request headers
+                let mut headers = header::Headers::new();
+                if let Some(user_agent) = treq.source.user_agent.clone() {
+                    headers.set(header::UserAgent(user_agent));
+                } else {
+                    headers.set(header::UserAgent(settings_read().user_agent_header()));
+                }
+            
                 // Request tile data from a remote server with GET
-                match client.get(url.as_str()).send() {
+                match client.get(url.as_str()).headers(headers).send() {
                     Ok(mut response) => {
                         debug!("Received response {} for tile {} data request for url {}", 
                                 response.status, treq.to_key(), url);
@@ -1490,6 +1490,12 @@ impl TileSource {
                         } else if response.status == StatusCode::NotFound {
                             debug!("Tile not found on server");
                             return TileRequestResult::with_code(treq, TileRequestResultCode::NotFoundError);
+                        } else if response.status == StatusCode::Unauthorized {
+                            debug!("Unauthorized: {}", url);
+                            return TileRequestResult::with_code(treq, TileRequestResultCode::UnauthorizedError);
+                        } else if response.status == StatusCode::InternalServerError {
+                            debug!("Internal server error when fetching tile");
+                            return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError);
                         } else {
                             warn!("HTTP GET returned status code {}", response.status);
                             return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError);

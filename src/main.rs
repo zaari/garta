@@ -29,7 +29,7 @@ mod geocoord;
 use std::cell::{RefCell};
 use std::process::{exit};
 
-use core::settings::{settings_write, settings_read};
+use core::settings::{settings_write, settings_read, APP_NAME, APP_VERSION};
 use core::tiles::{create_tile_cache};
 use core::atlas::{Atlas, Layer, Map, MapToken, MapView};
 use core::persistence::*;
@@ -37,7 +37,7 @@ use core::persistence::*;
 fn main() {
     // Initialize logger
     env_logger::init().unwrap();
-    info!("Garta started");
+    info!("{} {} started", APP_NAME, APP_VERSION);
     
     // Load settings
     info!("Loading settings");

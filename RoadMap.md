@@ -5,11 +5,9 @@ This is the development roadmap which is subject to change depending on the phas
 - status bar of the main window has maps, layers, coordinates and zoom level widgets completed
 - slippy maps can be defined in json files
 - tile cache
-- map implemented with basic scrolling and zooming support
+- map implemented with scrolling and zooming support (with smooth zooming and scrolling inertia)
 - maps have the required copyright information and the related clickable urls visible
 - view-related persistence 
-- smooth zooming
-- scrolling inertia
 
 ## Version 0.2
 - GPX loading
@@ -34,6 +32,7 @@ This is the development roadmap which is subject to change depending on the phas
 
 ## Version 0.6
 - maps dialog
+- 2x tile support
 
 ## Version 0.7
 - vehicle types

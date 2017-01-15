@@ -26,11 +26,19 @@ use std::path;
 /// Default number of days until tiles expire if the server doesn't send expiration information.
 pub static DEFAULT_TILE_EXPIRE_DAYS: i64 = 7;
 
-// Minimum number of worker threads in case of auto detection.
+/// Minimum number of worker threads in case of auto detection.
 static MIN_WORKER_THREADS: i32 = 2;
 
-// Maximum number of worker threads in case of auto detection.
+/// Maximum number of worker threads in case of auto detection.
 static MAX_WORKER_THREADS: i32 = 8;
+
+/// Application name
+pub static APP_NAME: &'static str = "Garta";
+
+/// Application version from Cargo.toml file.
+pub static APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub static APP_VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
+pub static APP_VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
 
 /// A singleton-like construct for settings_read and settings_write methods.
 lazy_static! {
@@ -146,6 +154,17 @@ impl Settings {
             1
         } else {
             self.worker_threads
+        }
+    }
+    
+    /// Return HTTP User Agent header to be used.
+    pub fn user_agent_header(&self) -> String {
+        // TODO: this can be simplified after reaching version 0.1.0
+        if APP_VERSION_MAJOR == "0" && APP_VERSION_MINOR == "0" {
+            format!("{}/{} (+https://github.com/zaari/garta)", APP_NAME, APP_VERSION)
+        } else {
+            format!("{}/{}.{} (+https://github.com/zaari/garta)", 
+                APP_NAME, APP_VERSION_MAJOR, APP_VERSION_MINOR)
         }
     }
     

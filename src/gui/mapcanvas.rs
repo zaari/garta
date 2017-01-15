@@ -52,18 +52,18 @@ pub struct MapCanvas {
     /// GKT drawing area widget for the canvas.
     pub widget: Option<gtk::DrawingArea>,
     
-    /// Floating text elements at southeast corner from bottom to up. 
-    /// The pivot points are relative to southeast corner of the window and 
-    /// thus always have negative coordinates.
+    // Floating text elements at southeast corner from bottom to up. 
+    // The pivot points are relative to southeast corner of the window and 
+    // thus always have negative coordinates.
     float_texts_se: RefCell<Vec<FloatingText>>,
 
-    /// Map window.
+    // Map window.
     map_win: Option<Rc<MapWindow>>,
     
-    /// Current mode of the canvas.
+    // Current mode of the canvas.
     mode: RefCell<MapCanvasMode>,
     
-    /// Mouse location of the previous event.
+    // Mouse location of the previous event.
     orig_pos: RefCell<PixelPos>,
     orig_center: RefCell<Location>,
     
@@ -219,7 +219,7 @@ impl MapCanvas {
 
             // Map
             if let Some(ref map_win) = self.map_win {
-                let mut map_view = map_win.map_view.borrow_mut();
+                let map_view = map_win.map_view.borrow();
                 let atlas = map_win.atlas.borrow();
                 if let Some(ref map) = atlas.maps.get(&map_view.map_slug) {
                     // Map projection
@@ -269,7 +269,7 @@ impl MapCanvas {
                                     gx + lx, gy + ly, zoom_level, mult, tile_source.clone()));
                             }
                         }
-                                    
+                        
                         // Request tile
                         for treq in treqs.iter().rev() {
                             // Handle the response
@@ -285,14 +285,7 @@ impl MapCanvas {
                                 }
                             }
                         }
-                        
-                        // Increase the generation
-                        if map_view.request_generation == u64::max_value() {
-                            map_view.request_generation = 1;
-                        } else {
-                            map_view.request_generation += 1;
-                        }
-                        
+
                         // Update accuracy as it's relatively cheap to compute it here
                         let view_se_pos = center_pos + PixelPos::new(vw / 2, vh / 2);
                         let view_nw_loc = projection.global_pixel_pos_to_location(view_nw_pos, ppdoe);
@@ -470,6 +463,16 @@ impl MapCanvas {
                 }
                 r
             } {
+                // Increase the generation
+                {
+                    let mut map_view = map_win.map_view.borrow_mut();
+                    if map_view.request_generation == u64::max_value() {
+                        map_view.request_generation = 1;
+                    } else {
+                        map_view.request_generation += 1;
+                    }
+                }
+            
                 // Request map update
                 map_win.update_map();
                 map_win.update_zoom_level_label(map_win.map_view.borrow().zoom_level);

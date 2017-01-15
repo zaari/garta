@@ -56,7 +56,7 @@ pub struct Atlas {
     /// Collection of maps.
     pub maps: BTreeMap<String, Map>,
     
-    /// Tokens for maps.
+    /// Access tokens for maps.
     pub tokens: HashMap<String, MapToken>,
 }
 
@@ -258,6 +258,9 @@ pub struct Map {
     pub token: String,
     
     #[serde(default)]
+    pub user_agent: Option<String>,
+    
+    #[serde(default)]
     pub copyrights: Vec<MapCopyright>,
 }
 
@@ -273,6 +276,7 @@ impl Map {
             dark: false,
             urls: Vec::new(),
             token: "".into(),
+            user_agent: None,
             copyrights: Vec::new(),
         }
     }
@@ -295,6 +299,7 @@ impl Map {
                 slug: self.slug.clone(),
                 urls: self.urls.clone(),
                 token: token,
+                user_agent: self.user_agent.clone(),
                 tile_width: self.tile_width.unwrap(),
                 tile_height: self.tile_height.unwrap(),
             })
