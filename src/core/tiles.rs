@@ -1211,7 +1211,7 @@ fn receive_treq_result() -> glib::Continue {
                     },
                     Err(e) => { 
                         if format!("{}", e) != "receiving on an empty channel" { // FIXME
-                            warn!("Failed to receive from a worker thread: {}", e);
+                            warn!("Failed to receive from a tile worker thread: {}", e);
                         }
                     },
                 }
@@ -1234,7 +1234,7 @@ impl TileRequestQueue {
     }
     
     fn init(&mut self, self_ar: Arc<RwLock<TileRequestQueue>>, tcache: Rc<RefCell<TileCache>>) {
-        // Start worker threads        
+        // Start tile worker threads        
         let n = settings_read().worker_threads();
         let mut http_client = Client::new();
         http_client.set_read_timeout(
@@ -1257,12 +1257,12 @@ impl TileRequestQueue {
                 }
             });
 
-            // Start the worker threads        
+            // Start the tile worker threads        
             let trqueue_t = self_ar.clone();
             let http_client_t = http_client_a.clone();
             let nt_m  = self.new_reqs_mutex.clone();
             let nt_cv = self.new_reqs_condvar.clone();
-            match thread::Builder::new().name(format!("worker-{}", i)).spawn( move || {
+            match thread::Builder::new().name(format!("tile-worker-{}", i)).spawn( move || {
                 loop {
                     // Wait for a pending tile to become available
                     {
@@ -1348,10 +1348,10 @@ impl TileRequestQueue {
                 }
             }) {
                 Ok(join_handle) => {
-                    debug!("Worker thread {} created", i);
+                    debug!("Tile worker thread {} created", i);
                 },
                 Err(e) => {
-                    panic!("Failed to create a worker thread: {}", e);
+                    panic!("Failed to create a tile worker thread: {}", e);
                 }
             }
         }

@@ -24,11 +24,11 @@ This is the development roadmap which is subject to change depending on the phas
 - GPX saving
 
 ## Version 0.4
-- internationalization, gettext (contributors needed)
-
-## Version 0.5
 - attractions
 - drag & drop
+
+## Version 0.5
+- internationalization, gettext (contributors needed)
 
 ## Version 0.6
 - maps dialog
