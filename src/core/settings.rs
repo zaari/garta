@@ -14,14 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+extern crate regex;
 extern crate num_cpus;
 extern crate serde_json;
+extern crate hyper;
 
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::fs;
 use std::cmp::{min, max};
 use std::env;
 use std::path;
+use self::hyper::client::{Client};
+use self::regex::{Regex};
 
 /// Default number of days until tiles expire if the server doesn't send expiration information.
 pub static DEFAULT_TILE_EXPIRE_DAYS: i64 = 7;
@@ -62,11 +66,20 @@ pub struct Settings {
     /// Maximum number of threads loading and processing data
     worker_threads: i32,
     
-    // HTTP read timeout when fetching tiles from network sources.
+    /// HTTP read timeout when fetching tiles from network sources.
     pub tile_read_timeout: u64,
     
-    // HTTP write timeout when sendinf requests.
+    /// HTTP write timeout when sendinf requests.
     pub tile_write_timeout: u64,
+
+    /// Automatic proxy settings.
+    pub http_proxy_auto: bool,
+    
+    /// HTTP proxy hostname,
+    pub http_proxy_host: Option<String>,
+    
+    /// HTTP proxy port.
+    pub http_proxy_port: Option<u16>,
     
     /// Number of times to try reloading HTTP resources.
     pub http_retry_count: u8,
@@ -96,6 +109,9 @@ impl Settings {
             tile_read_timeout: 20,
             tile_write_timeout: 10,
             http_retry_count: 3,
+            http_proxy_auto: true,
+            http_proxy_host: None,
+            http_proxy_port: None,
             tile_mem_cache_capacity: Some(10 * 1024 * 1024),
             tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
@@ -155,6 +171,52 @@ impl Settings {
         } else {
             self.worker_threads
         }
+    }
+
+    /// Create a new HTTP client with or without a proxy.    
+    pub fn http_client(&self) -> Client {
+        // Use environment HTTP proxy settings if automatic settings are wanted
+        let (http_proxy_host, http_proxy_port) = {
+            if self.http_proxy_auto {
+                match env::var("http_proxy") {
+                    Ok(var) => {
+                        // Parse the environment variable
+                        let re = Regex::new(r"http://([a-z0-9\\-\\.]+):([0-9]+)").unwrap();
+                        if let Some(cap) = re.captures(var.as_str()) {
+                            let hostname = &cap[1].to_string();
+                            let port = &cap[2].parse().unwrap_or(80);
+                            debug!("Auto-proxy wanted and environment http_proxy used: {}:{}", hostname, port);
+                            (Some(hostname.clone()), Some(*port))
+                        } else {
+                            error!("Auto-proxy wanted but environment variable http_proxy has unexpected syntax: {}", var);
+                            (None, None)
+                        }
+                    },
+                    Err(e) => {
+                        debug!("Auto-proxy wanted but no proxy environment variables available");
+                        (None, None)
+                    }
+                }
+            } else {
+                if self.http_proxy_host.is_some() && self.http_proxy_port.is_some() {
+                    debug!("No auto-proxy wanted. Returning {}:{}", 
+                        self.http_proxy_host.clone().unwrap(), 
+                        self.http_proxy_port.unwrap());
+                    (self.http_proxy_host.clone(), self.http_proxy_port)
+                } else {
+                    debug!("No auto-proxy wanted, no proxy defined.");
+                    (None, None)
+                }
+            }
+        };
+
+        // Create an HTTP client
+        if let Some(ref host) = http_proxy_host {
+            if let Some(port) = http_proxy_port {
+                return Client::with_http_proxy(host.clone(), port)
+            }
+        }
+        Client::new()
     }
     
     /// Return HTTP User Agent header to be used.

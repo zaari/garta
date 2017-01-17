@@ -25,9 +25,9 @@ using worker threads. It also converts the downloaded image files into image buf
 are given to the GTK main thread where those buffers are cached into Cairo ImageSurfaces 
 that are used to render the map.
 
-In the future it may be worth evaluating the option to use futures-rs based crates, to make 
-this module more efficient and elegant. It may be better to wait for the crates to reach a 
-stable version first, though.
+In the future it may be worth evaluating the option to use asynchronous crates (futures-rs, 
+async hyper), to make this module more efficient and elegant. It may be better to wait for 
+the crates to reach a stable version first, though.
 
 
 TILE LOADING SEQUENCE DIAGRAM
@@ -1236,7 +1236,7 @@ impl TileRequestQueue {
     fn init(&mut self, self_ar: Arc<RwLock<TileRequestQueue>>, tcache: Rc<RefCell<TileCache>>) {
         // Start worker threads        
         let n = settings_read().worker_threads();
-        let mut http_client = Client::new();
+        let mut http_client = settings_read().http_client();
         http_client.set_read_timeout(
             Some(time::Duration::from_secs(settings_read().tile_read_timeout)));
         http_client.set_write_timeout(
