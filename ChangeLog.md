@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- Unloaded tile approximation by scaling
 - Clicking copyright texts opens the related url in a browser
 
 ## [0.0.5]

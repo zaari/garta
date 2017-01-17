@@ -262,18 +262,16 @@ impl TileCache {
             // Approximate content
             if treq.z > 0 {
                 let mut treq_up = treq.zoom_out();
-                let mut n = 2;
                 while treq_up.z >= 1 {
-                    let tile_key_up = treq.to_key();
+                    let tile_key_up = treq_up.to_key();
                     if self.tiles.contains_key(&tile_key_up) {
-                        tile = self.tiles.get(&tile_key).unwrap().zoom_in(&treq);
+                        tile = self.tiles.get(&tile_key_up).unwrap().zoom_in(&treq);
                         break;
                     }
                     treq_up = treq_up.zoom_out();
-                    n *= 2;
                 }
                 
-                // Create a black tile
+                // Create a black tile on top
                 if treq_up.z == 0 {
                     tile = Tile::new(&treq, 0.0, 0.0, 0.0);
                 }
@@ -723,9 +721,9 @@ impl Tile {
     /// Approximate a new tile by zooming this one in.
     fn zoom_in(&self, treq: &TileRequest) -> Tile {
         // Math
-        let q2 = 1 << (self.z - treq.z) as i32;
-        let offset_x = -self.width * (treq.x as i32 % q2);
-        let offset_y = -self.height * (treq.y as i32 % q2);
+        let q2 = 1 << (treq.z - self.z) as i32;
+        let offset_x = (-self.width * (treq.x as i32 % q2) / q2) as f64;
+        let offset_y = (-self.height * (treq.y as i32 % q2) / q2) as f64;
 
         // Create a new
         let isurface = ImageSurface::create(Format::ARgb32, self.width, self.height);
@@ -733,8 +731,9 @@ impl Tile {
         c.scale(q2 as f64, q2 as f64);
         if let Some(ref self_surface) = self.surface {
             // Paint from source surface
-            c.set_source_surface(self_surface, offset_x as f64, offset_y as f64);
+            c.set_source_surface(self_surface, offset_x, offset_y);
             c.paint();
+            debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
         } else {
             // Red tile in case of missing surface
             c.set_source_rgb(0.8, 0.0, 0.0);
@@ -911,7 +910,7 @@ impl TileRequest {
         cache_path.push(&self.source.slug);
         
         // Zoom level directory 
-        cache_path.push(self.z.to_string());
+        cache_path.push(format!("{:02}", self.z));
         
         // X and Y coordinate parts (max 256 items per subdirectory)
         if self.z <= 4 {
@@ -922,22 +921,23 @@ impl TileRequest {
             fs::create_dir_all(&cache_path)?;
             cache_path.push(self.x.to_string());
         } else if self.z <= 16 {
-            let name = format!("{:4x}{:4x}", self.y, self.wrap_x());
+            let name = format!("{:04x}{:04x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
             cache_path.push(name[4..6].to_string());
             fs::create_dir_all(&cache_path)?;
             cache_path.push(name[6..8].to_string());
         } else if self.z <= 24 {
-            let name = format!("{:6x}{:6x}", self.y, self.wrap_x());
+            let name = format!("{:06x}{:06x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
-            cache_path.push(name[4..8].to_string());
+            cache_path.push(name[4..6].to_string());
+            cache_path.push(name[6..8].to_string());
             cache_path.push(name[8..10].to_string());
             fs::create_dir_all(&cache_path)?;
             cache_path.push(name[10..12].to_string());
         } else {
-            let name = format!("{:8x}{:8x}", self.y, self.wrap_x());
+            let name = format!("{:08x}{:08x}", self.y, self.wrap_x());
             cache_path.push(name[0..2].to_string());
             cache_path.push(name[2..4].to_string());
             cache_path.push(name[4..6].to_string());
@@ -1211,7 +1211,7 @@ fn receive_treq_result() -> glib::Continue {
                     },
                     Err(e) => { 
                         if format!("{}", e) != "receiving on an empty channel" { // FIXME
-                            warn!("Failed to receive from a tile worker thread: {}", e);
+                            warn!("Failed to receive from a worker thread: {}", e);
                         }
                     },
                 }
@@ -1234,7 +1234,7 @@ impl TileRequestQueue {
     }
     
     fn init(&mut self, self_ar: Arc<RwLock<TileRequestQueue>>, tcache: Rc<RefCell<TileCache>>) {
-        // Start tile worker threads        
+        // Start worker threads        
         let n = settings_read().worker_threads();
         let mut http_client = Client::new();
         http_client.set_read_timeout(
@@ -1257,12 +1257,12 @@ impl TileRequestQueue {
                 }
             });
 
-            // Start the tile worker threads        
+            // Start the worker threads        
             let trqueue_t = self_ar.clone();
             let http_client_t = http_client_a.clone();
             let nt_m  = self.new_reqs_mutex.clone();
             let nt_cv = self.new_reqs_condvar.clone();
-            match thread::Builder::new().name(format!("tile-worker-{}", i)).spawn( move || {
+            match thread::Builder::new().name(format!("worker-{}", i)).spawn( move || {
                 loop {
                     // Wait for a pending tile to become available
                     {
@@ -1348,10 +1348,10 @@ impl TileRequestQueue {
                 }
             }) {
                 Ok(join_handle) => {
-                    debug!("Tile worker thread {} created", i);
+                    debug!("Worker thread {} created", i);
                 },
                 Err(e) => {
-                    panic!("Failed to create a tile worker thread: {}", e);
+                    panic!("Failed to create a worker thread: {}", e);
                 }
             }
         }
