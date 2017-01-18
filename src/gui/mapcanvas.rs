@@ -444,6 +444,7 @@ impl MapCanvas {
                     
                     // Zoom direction
                     if dy < 0.0 {
+                        // Zoom in
                         if map_view.zoom_level < 17 { // TODO
                             map_view.zoom_level += 1;
                             map_view.focus = mouse_location;
@@ -452,11 +453,12 @@ impl MapCanvas {
                             r = true;
                         }
                     } else if dy > 0.0 {
+                        // Zoom out
                         if map_view.zoom_level > 0 {
                             map_view.zoom_level -= 1;                
                             map_view.focus = mouse_location;
                             map_view.center = map_view.center.weighted_average(
-                                    &map_view.focus.unwrap_or(map_view.center), 0.5);
+                                    &map_view.focus.unwrap_or(map_view.center), 0.5); // TODO: this centers wrong
                             r = true;
                         }
                     }

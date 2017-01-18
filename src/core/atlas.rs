@@ -386,6 +386,12 @@ pub struct MapView {
     /// Tile request generation.
     #[serde(skip_serializing, default)]
     pub request_generation: u64,
+    
+    /// Window x and y position in pixels.
+    pub window_position: Option<(i32, i32)>,
+    
+    /// Window width and height in pixels.
+    pub window_size: Option<(i32, i32)>,
 }
 
 impl MapView {
@@ -398,6 +404,8 @@ impl MapView {
             map_slug: "".into(),
             coordinates_format: "dm".into(),
             request_generation: 1,
+            window_position: None,
+            window_size: None,
         }
     }
     

@@ -143,16 +143,38 @@ impl MapWindow {
                 win.add_action(&add_layers_action);
                 
                 // Event for window close button
-                win.connect_delete_event(|_, _| {
-                    gtk::main_quit();
-                    gtk::Inhibit(false)
-                });
+                {
+                    let self_rc2 = self_rc.clone();
+                    win.connect_delete_event(move |_, _| {
+                        // Save window geometry
+                        if let Some(ref win) = self_rc2.widgets.borrow().win {
+                            let mut view = self_rc2.map_view.borrow_mut();
+                            view.window_size = Some(win.get_size());
+                            view.window_position = Some(win.get_position());
+                        }
+                    
+                        // Quit GTK
+                        gtk::main_quit();
+                        gtk::Inhibit(false)
+                    });
+                }
 
                 // Add map widget
                 let map_box: gtk::Box = builder.get_object("map_box").unwrap();
                 map_box.add(self.map_canvas.borrow().widget.as_ref().unwrap());
                 map_box.set_child_packing(self.map_canvas.borrow().widget.as_ref().unwrap(), 
                     true, true, 0, gtk::PackType::End);
+
+                // Set window position and size
+                {
+                    let view = self.map_view.borrow_mut();
+                    if let Some(win_pos) = view.window_position {
+                        win.move_(win_pos.0, win_pos.1);
+                    }
+                    if let Some(win_size) = view.window_size {
+                        win.set_default_size(win_size.0, win_size.1);
+                    }
+                }
                 
                 // Show win and enter GTK main loop
                 win.show_all();

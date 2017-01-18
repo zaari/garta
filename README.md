@@ -1,5 +1,5 @@
 # Garta
-Garta is going to be a GPX viewer, analyzer and editor for GTK3 toolkit (used by e.g. GNOME 3 desktop environment) and is written in Rust programming language. The application is still at a pretty early development stage and won't be that useful before release [0.1.0](https://github.com/zaari/garta/milestone/1).
+Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.gtk.org/) toolkit (used by e.g. [GNOME 3 desktop environment](https://www.gnome.org/gnome-3/)) and is written in Rust programming language. The application is still at a pretty early development stage and won't be that useful before release [0.1.0](https://github.com/zaari/garta/milestone/1).
 
 * [Road Map](RoadMap.md)
 * [Change Log](ChangeLog.md)
