@@ -16,6 +16,7 @@
 
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![allow(unused_assignments)] // ...to avoid false warnings
 
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate lazy_static;

@@ -83,9 +83,9 @@ use std::cell::{RefCell};
 use std::rc::{Rc};
 use std::sync::{Arc, RwLock, Mutex, Condvar};
 use std::sync::mpsc::{channel, Receiver};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{HashMap, BTreeSet};
 use std::thread;
-use std::cmp::{Ordering};
+use std::cmp::{Ordering, min, max};
 use std::io::{Read};
 use std::vec::{Vec};
 use std::fmt;
@@ -110,6 +110,7 @@ use core::settings::{settings_read, DEFAULT_TILE_EXPIRE_DAYS};
 
 /// Callback-like trait for objects that want to get notified when a tile is fetched.
 pub trait TileObserver {
+    /// Notifies about a new tile loaded.
     fn tile_loaded(&self, treq: &TileRequest);
 }
 
@@ -117,7 +118,7 @@ pub trait TileObserver {
 /// The main access point for tiles
 pub struct TileCache {
     /// TileRequest::to_key -> Tile map
-    tiles: BTreeMap<String, Tile>,
+    tiles: HashMap<String, Tile>,
 
     /// The queue accessed by the worker threads    
     tile_request_queue: Arc<RwLock<TileRequestQueue>>,
@@ -125,11 +126,11 @@ pub struct TileCache {
     /// Object to be notified when new tiles are ready.    
     pub observer: Option<Rc<TileObserver>>,
     
-    /// Memory used by the cached tiles
-    mem_usage: usize,
-    
     /// Disk used by the cached tiles.
-    disk_usage: u64,
+    disk_usage: i64,
+    
+    /// Number of inserts since last flush check
+    inserts_since_flush_check: u32,
 }
 
 /// The first function to be called in this module.
@@ -156,132 +157,197 @@ impl TileCache {
     // Private constructor. Use function create_tile_cache to create an instance.
     fn new() -> TileCache {
         let tcache = TileCache {
-            tiles: BTreeMap::new(),
+            tiles: HashMap::new(),
             tile_request_queue: TileRequestQueue::new(),
             observer: None,
-            mem_usage: 0,
             disk_usage: 0,
+            inserts_since_flush_check: 0,
         };
         tcache
     }
 
     /// Return tile for the given request. The result may be an approximation.    
     pub fn get_tile(&mut self, treq: &TileRequest) -> Option<&mut Tile> {
-        let tile_key = treq.to_key();
         //debug!("get_tile: {:?}, contains: {:?}", treq, self.tiles.get(&tile_key).unwrap());
+        
+        // If the coordinates are out of bounds, return an empty tile
+        if treq.y < 0 || treq.y >= (1 << treq.z) {
+            return None;
+        }
+    
+        let tile_key = treq.to_key();
         if self.tiles.contains_key(&tile_key) {
             // Check tile state
-            if self.tiles.get(&tile_key).unwrap().state == TileState::Void {
-                // Special case for Void which requires mutating the tile hashmap
-                debug!("Loading a void tile: {}", tile_key);
-                let mut tile = Tile::new_with_request(treq);
-                tile.state = TileState::Pending;
-                self.tiles.insert(tile_key.clone(), tile);
-                self.tile_request_queue.write().unwrap().push_request(treq);
+            match self.tiles.get(&tile_key).unwrap().state {
+                TileState::Void => {
+                    debug!("Loading a void tile: {}", tile_key);
+                    let mut tile = Tile::new_with_request(treq);
+                    tile.state = TileState::Pending;
+                    self.tiles.insert(tile_key.clone(), tile);
+                    self.tile_request_queue.write().unwrap().push_request(treq);
+                }
+                TileState::Pending => {
+                    return Some(self.tiles.get_mut(&tile_key).unwrap())
+                }
+                TileState::Ready => {
+                    let mut tile = self.tiles.get_mut(&tile_key).unwrap();
                 
-                // Return
-                Some(self.tiles.get_mut(&tile_key).unwrap())
-            } else {
-                // Faster case for the rest of the states
-                let tile = self.tiles.get_mut(&tile_key).unwrap();
-                match tile.state {
-                    TileState::Void => {
-                        panic!("Unexpected code path!");
-                    }
-                    TileState::Pending => {
-                    }
-                    TileState::Fetching => {
-                    }
-                    TileState::Ready => {
-                    
-                        // Check tile expiration
-                        if tile.is_expired() {
-                            tile.state = TileState::Pending;
-                            
-                            // Request a tile from disk cache first, to get a temporary tile until 
-                            // tile source request is completed
-                            let mut treq2 = treq.clone();
-                            treq2.tile_fetch_mode = TileFetchMode::Cache;
-                            treq2.tile_state_on_success = TileState::Pending;
-                            self.tile_request_queue.write().unwrap().push_request(&treq2);
-
-                            // Make another request from tile source                        
-                            debug!("Memory-cached tile expired, requesting an update: {}", tile_key);
-                            let mut treq3 = treq.clone();
-                            treq3.tile_fetch_mode = TileFetchMode::Remote;
-                            self.tile_request_queue.write().unwrap().push_request(&treq3);
-                        }
-                    }
-                    TileState::Error => {
-                    }
-                    TileState::NonExistent => {
-                    }
-                    TileState::Unauthorized => {
-                    }
-                    TileState::Flushed => {
-                        debug!("Reloading a flushed tile: {}", tile_key);
+                    // Check tile expiration
+                    if tile.is_expired() {
                         tile.state = TileState::Pending;
-
-                        // Check tile expiration
-                        if tile.is_expired() {
-                            // Request a tile from disk cache first, to get a temporary tile until 
-                            // tile source request is completed
-                            let mut treq2 = treq.clone();
-                            treq2.tile_fetch_mode = TileFetchMode::Cache;
-                            treq2.tile_state_on_success = TileState::Pending;
-                            self.tile_request_queue.write().unwrap().push_request(&treq2);
                         
-                            // Make another request from tile source                        
-                            debug!("Disk-cached tile expired, requesting an update: {}", tile_key);
-                            let mut treq3 = treq.clone();
-                            treq3.tile_fetch_mode = TileFetchMode::Remote;
-                            self.tile_request_queue.write().unwrap().push_request(&treq3);
-                        } else {
-                            self.tile_request_queue.write().unwrap().push_request(treq);
-                        }
+                        // Request a tile from disk cache first, to get a temporary tile until 
+                        // tile source request is completed
+                        let mut treq2 = treq.clone();
+                        treq2.tile_fetch_mode = TileFetchMode::Cache;
+                        treq2.tile_state_on_success = TileState::Pending;
+                        self.tile_request_queue.write().unwrap().push_request(&treq2);
+
+                        // Make another request from tile source                        
+                        debug!("Memory-cached tile expired, requesting an update: {}", tile_key);
+                        let mut treq3 = treq.clone();
+                        treq3.tile_fetch_mode = TileFetchMode::Remote;
+                        self.tile_request_queue.write().unwrap().push_request(&treq3);
+                    }
+                    return Some(tile)
+                }
+                TileState::Error => {
+                    return Some(self.tiles.get_mut(&tile_key).unwrap())
+                }
+                TileState::NonExistent => {
+                    return Some(self.tiles.get_mut(&tile_key).unwrap())
+                }
+                TileState::Unauthorized => {
+                    return Some(self.tiles.get_mut(&tile_key).unwrap())
+                }
+                TileState::Flushed => {
+                    debug!("Reloading a flushed tile: {}", tile_key);
+                    let mut tile = Tile::new_with_request(treq);
+                    tile.state = TileState::Pending;
+
+                    // Check tile expiration
+                    if tile.is_expired() {
+                        // Request a tile from disk cache first, to get a temporary tile until 
+                        // tile source request is completed
+                        let mut treq2 = treq.clone();
+                        treq2.tile_fetch_mode = TileFetchMode::Cache;
+                        treq2.tile_state_on_success = TileState::Pending;
+                        self.tile_request_queue.write().unwrap().push_request(&treq2);
+                    
+                        // Make another request from tile source                        
+                        debug!("Disk-cached tile expired, requesting an update: {}", tile_key);
+                        let mut treq3 = treq.clone();
+                        treq3.tile_fetch_mode = TileFetchMode::Remote;
+                        self.tile_request_queue.write().unwrap().push_request(&treq3);
+                    } else {
+                        self.tile_request_queue.write().unwrap().push_request(treq);
                     }
                 }
-
-                // Update access time
-                tile.access_time = UTC::now();
-                
-                // Return
-                Some(tile)
             }
         } else {
-            // If the coordinates are out of bounds, return an empty tile
-            if treq.y < 0 || treq.y >= (1 << treq.z) {
-                return None;
-            }
-        
-            // Enqueue the request and create a new empty tile
             debug!("Requesting a new tile: {}", tile_key);
             self.tile_request_queue.write().unwrap().push_request(treq);
-            let mut tile = Tile::new_with_request(treq);
-            
-            // Approximate content
-            if treq.z > 0 {
-                let mut treq_up = treq.zoom_out();
-                while treq_up.z >= 1 {
-                    let tile_key_up = treq_up.to_key();
-                    if self.tiles.contains_key(&tile_key_up) {
-                        tile = self.tiles.get(&tile_key_up).unwrap().zoom_in(&treq);
+        }
+        
+        // Approximate content
+        let mut tile = Tile::new_with_request(treq);
+        if treq.z > 0 {
+            let mut treq_up = treq.zoom_out();
+            let mut up_found = false;
+            while treq_up.z >= 1 {
+                let tile_key_up = treq_up.to_key();
+                if self.tiles.contains_key(&tile_key_up) {
+                    let tile_up = self.tiles.get(&tile_key_up).unwrap();
+                    if tile_up.surface.is_some() && !tile_up.surface_is_temporary {
+                        tile = tile_up.zoom_in(&treq);
+                        up_found = true;
                         break;
                     }
-                    treq_up = treq_up.zoom_out();
                 }
-                
-                // Create a black tile on top
-                if treq_up.z == 0 {
-                    tile = Tile::new(&treq, 0.0, 0.0, 0.0);
-                }
-            } else {
-                tile = Tile::new(&treq, 0.0, 0.0, 0.0);
+                treq_up = treq_up.zoom_out();
             }
             
-            // Store tile and return
-            self.tiles.insert(tile_key.clone(), tile);
-            Some(self.tiles.get_mut(&tile_key).unwrap())
+            // If no upper tiles were found or if it was too high...
+            if !up_found || treq.z - treq_up.z > 3 {
+                // Create a black tile if there aren't loaded tiles above
+                if !up_found {
+                    tile = Tile::new_with_color(&treq, 0.2, 0.2, 0.2);
+                }
+
+                // Enqueue a new request to prepare for similar cases
+                if treq.z > 0 {
+                    // Request precautionary tiles three levels higher
+                    self.queue_precautionary_request(&treq, -3,  0,  0, 1);
+                    self.queue_precautionary_request(&treq, -3,  1,  0, 1);
+                    self.queue_precautionary_request(&treq, -3, -1,  0, 1);
+                    self.queue_precautionary_request(&treq, -3,  0, -1, 1);
+                    self.queue_precautionary_request(&treq, -3,  0,  1, 1);
+                }
+            } else {
+                debug!("Created an approximation treq_up={:?}", treq_up);
+            }
+        } else {
+            tile = Tile::new_with_color(&treq, 0.2, 0.0, 0.0);
+        }        
+
+        // Store tile and return
+        self.tiles.insert(tile_key.clone(), tile);
+        self.inserts_since_flush_check += 1;
+        Some(self.tiles.get_mut(&tile_key).unwrap())
+    }
+
+    /// Clears any tile request which is not about the given level.
+    pub fn focus_on_zoom_level(&mut self, zoom_level: u8) {
+        // Clean queue
+        let ref mut trq = self.tile_request_queue;
+        let mut tile_keys: Vec<String> = Vec::with_capacity(trq.read().unwrap().queue.len());
+        trq.write().unwrap().focus_on_zoom_level(zoom_level, &mut tile_keys);
+        
+        // Mark tiles void
+        for ref key in tile_keys {
+            if let Some(tile) = self.tiles.get_mut(key) {
+                tile.state = TileState::Void;
+            }
+        }
+    }
+
+    /// Request a precautionary tile for the given tile offset. Does nothing if the 
+    /// request is out of range.
+    fn queue_precautionary_request(&mut self, base_treq: &TileRequest, delta_z: i8, delta_x: i8, delta_y: i8, delta_pri: i8) {
+        // Delta-Z
+        let mut treq = base_treq.clone();
+        for i in 0..(-delta_z) {
+            if treq.z > 0 {
+                treq = treq.zoom_out();
+            }
+        }
+        treq.precautionary = true;
+        treq.generation = max(0, min(treq.generation as i64 + delta_pri as i64, i64::max_value())) as u64;
+        let side = 1 << treq.z;
+        
+        // Delta-X
+        treq.x += delta_x as i64;
+        if treq.x < 0 || treq.x >= side { return }
+        
+        // Delta-Y
+        treq.y += delta_y as i64;
+        if treq.y < 0 || treq.y >= side { return }
+
+        // Enqueue a request if tile is not being loaded
+        if {
+            if let Some(tile) = self.tiles.get(&treq.to_key()) {
+                if tile.state == TileState::Pending || tile.state == TileState::Ready {
+                    false
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        } {
+            self.tile_request_queue.write().unwrap().push_request(&treq);
+            let tile = Tile::new_with_color(&treq, 0.0, 0.0, 0.0);
+            self.tiles.insert(treq.to_key(), tile);
         }
     }
     
@@ -292,8 +358,6 @@ impl TileCache {
         if let Some(ref mut tile) = self.tiles.get_mut(&treq_result.to_key()) {
             match treq_result.code {
                 TileRequestResultCode::Ok => {
-                    let old_mem_usage = tile.estimate_mem_usage();
-                
                     // Assign tile data
                     let treq = &treq_result.request;
                     let old_tile_disk_usage = tile.disk_usage;
@@ -314,8 +378,7 @@ impl TileCache {
                     };
                     tile.disk_usage = {
                         if let Some(ref img_data) = treq_result.img_data { img_data.len() } else { 0 }
-                    } as u64;
-                    self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - old_mem_usage;
+                    } as i64;
                     self.disk_usage = self.disk_usage + tile.disk_usage - old_tile_disk_usage
                 },
                 TileRequestResultCode::TransmissionError => {
@@ -368,85 +431,113 @@ impl TileCache {
             warn!("Received image data fetch for tile {} but tile isn't in cache!", 
                 treq_result.to_key());
         }
+        
+        // Flush mem and disk caches if needed.
+        if self.inserts_since_flush_check > 100 { // TODO: non-hardcoded
+            self.check_cache();
+            self.inserts_since_flush_check = 0;
+        }
 
-/*
-        // Mem-flush a tile which would expire the soonest
-        // FIXME: analyze access times
+        return true;
+    }
+
+    /// Flush caches if their memory usage is too high.
+    fn check_cache(&mut self) {
+        // Create a vector ordered by access time and count mem usage
+        let mut tord: Vec<TileOrd> = Vec::with_capacity(self.tiles.len());
+        let mut mem_usage = 0;
+        for (ref tile_key, ref mut tile) in self.tiles.iter_mut() {
+            tord.push(TileOrd::new_with_access_time(*tile_key, tile));
+            mem_usage += tile.estimate_mem_usage();
+        }
+        tord.sort_by(|a, b| a.cmp(b) ); // For a temporary collection Vector is likely faster than using a BTreeSet
+    
+        // Mem-flush a tile which has been accessed the longest time ago
         if let Some(mem_capacity) = settings_read().tile_mem_cache_capacity {
-            if self.mem_usage > mem_capacity {
-                let ref mut tiles = self.tiles;
-                for (ref tile_id, ref mut tile) in tiles.iter_mut() {
-                    if self.mem_usage <= mem_capacity {
+            if mem_usage > mem_capacity {
+                // Flush some tiles
+                for to in &tord {
+                    if mem_usage <= mem_capacity {
                         break;
                     }
-
-                    // Flush only lower tiles
-                    if tile.z > 3 {
-                        let tmu0 = tile.estimate_mem_usage();
-                        tile.flush();
-                        self.mem_usage = self.mem_usage + tile.estimate_mem_usage() - tmu0;
+                    
+                    if let Some(tile) = self.tiles.get_mut(&to.key) {
+                        // Flush only lower tiles
+                        if tile.z > 3 && tile.flushable() {
+                            let tmu0 = tile.estimate_mem_usage();
+                            tile.flush();
+                            let delta_mem_usage = tile.estimate_mem_usage() - tmu0;
+                            mem_usage += delta_mem_usage;
+                            debug!("Flushed mem cache tile {:?} {} -> {} bytes ({})", 
+                                tile,
+                                mem_usage - delta_mem_usage, mem_usage, delta_mem_usage);
+                        }
+                    } else {
+                        warn!("Tile missing for key: {}", to.key);
                     }
                 }
             }
         }
-*/        
         
-        // Disk-flush a tile which would expire the soonest
+        // Disk-flush a tile which was accessed the longest time ago
         if let Some(disk_capacity) = settings_read().tile_disk_cache_capacity {
             if self.disk_usage > disk_capacity {
-                // Flush the last tile
-                for (ref tile_id, ref mut tile) in self.tiles.iter_mut() {
-                    if let Some(filepath) = tile.filepath.clone() {
-                        let mut delete_file = false;
-                        let mut file_size: u64 = 0;
-                        if filepath.exists() {
-                            match fs::File::open(&filepath) {
-                                Ok(f) => {
-                                    match f.metadata() {
-                                        Ok(metadata) => {
-                                            // Get file size
-                                            file_size = metadata.len();
-                                            
-                                            // Delete file
-                                            match fs::remove_file(&filepath) {
-                                                Ok(()) => { 
-                                                    delete_file = true;
-                                                }
+                // Flush the tiles starting from the beginning until cache size gets small enough
+                for to in &tord {
+                    let mut delete_tile = false;
+                    {
+                        if let Some(tile) = self.tiles.get_mut(&to.key) {
+                            if let Some(filepath) = tile.filepath.clone() {
+                                let mut file_size: i64 = 0; // false warning
+                                if filepath.exists() {
+                                    match fs::File::open(&filepath) {
+                                        Ok(f) => {
+                                            match f.metadata() {
+                                                Ok(metadata) => {
+                                                    // Get file size
+                                                    file_size = metadata.len() as i64;
+                                                    
+                                                    // Delete file
+                                                    match fs::remove_file(&filepath) {
+                                                        Ok(()) => { 
+                                                            self.disk_usage -= file_size;
+                                                            delete_tile = true;
+                                                        }
+                                                        Err(e) => {
+                                                            warn!("Failed to remove file {}: {}", 
+                                                                filepath.to_str().unwrap_or("???"), e);
+                                                        }
+                                                    }
+                                                    
+                                                },
                                                 Err(e) => {
-                                                    warn!("Failed to remove file {}: {}", 
+                                                    warn!("No metadata for file {}: {}", 
                                                         filepath.to_str().unwrap_or("???"), e);
                                                 }
                                             }
-                                            
                                         },
                                         Err(e) => {
-                                            warn!("No metadata for file {}: {}", 
+                                            warn!("Failed to stat file {}: {}", 
                                                 filepath.to_str().unwrap_or("???"), e);
                                         }
                                     }
-                                },
-                                Err(e) => {
-                                    warn!("Failed to stat file {}: {}", 
-                                        filepath.to_str().unwrap_or("???"), e);
                                 }
                             }
-                        }
-                        
-                        // Update disk_cache size
-                        if delete_file {
-                            debug!("Removing file {} from cache {} -> {} bytes", 
-                                filepath.to_str().unwrap_or("???"), 
-                                self.disk_usage, self.disk_usage - file_size);
-                            self.disk_usage -= file_size;
-                            tile.filepath = None;
-                            if self.disk_usage <= disk_capacity { break; }
+                        } else {
+                            warn!("Tile not found for key: {}", &to.key);
                         }
                     }
+                    
+                    // Delete tile from cache                        
+                    if delete_tile {
+                        self.tiles.remove(&to.key);
+                    }
+
+                    // Stop if flushing target reached
+                    if self.disk_usage <= disk_capacity { break; }
                 }
             }
-            return true;
         }
-        return false;
     }
 
     /// Save cache state to disk. Typically this is called before the application is closed.
@@ -489,7 +580,7 @@ impl TileCache {
 
 impl fmt::Debug for TileCache {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "tiles={} queue.len={} observer={} mem_usage={} disk_usage={}",
+        write!(f, "tiles={} queue.len={} observer={} disk_usage={}",
             self.tiles.len(),
             {
                 match self.tile_request_queue.read() {
@@ -497,7 +588,6 @@ impl fmt::Debug for TileCache {
                 }
             },
             self.observer.is_some(),
-            self.mem_usage,
             self.disk_usage)
     }
 }
@@ -509,7 +599,7 @@ impl fmt::Debug for TileCache {
 #[derive(Serialize, Deserialize, Debug)]
 struct TileCacheState {
     /// The tiles
-    tiles: BTreeMap<String, Tile>,
+    tiles: HashMap<String, Tile>,
 }
 
 impl TileCacheState {
@@ -523,7 +613,6 @@ impl TileCacheState {
     /// Apply tile cache state to tile cache.    
     fn apply(&mut self, tcache: &mut TileCache) {
         tcache.tiles = self.tiles.clone();
-        tcache.mem_usage = 0;
         tcache.disk_usage = 0;
 
         // Make Tiles tiles flushed and fill the usage fields
@@ -538,7 +627,6 @@ impl TileCacheState {
                 black_surface = tile.surface.clone();
             }
             tile.surface_is_temporary = true;
-            tcache.mem_usage += tile.estimate_mem_usage();
             tcache.disk_usage += tile.disk_usage;
         }
     }
@@ -552,13 +640,10 @@ pub enum TileState {
     // Without any real information or data.
     Void,
 
-    /// Just created and waiting for a thread to process it.
+    /// Tile created and waiting for a thread to process it.
     /// Contents of the tile is either black, approximated from a different zoom level
     /// or contains expired data.
     Pending,
-    
-    /// Content been loaded from tile source.
-    Fetching,
     
     /// Content ready for use.
     Ready,
@@ -600,7 +685,7 @@ pub struct Tile {
     /// Tile height as pixels
     height: i32,
     
-    /// Time when this tile was needed.
+    /// Time when this tile was needed. This should be modified either before the tile is
     #[serde(serialize_with = "serialize_datetime", deserialize_with = "deserialize_datetime")]
     access_time: DateTime<UTC>,
     
@@ -628,7 +713,7 @@ pub struct Tile {
     filepath: Option<path::PathBuf>,
     
     /// Image file size on disk.
-    disk_usage: u64,
+    disk_usage: i64,
 }
 
 impl Tile {
@@ -650,7 +735,7 @@ impl Tile {
     }
 
     /// Constructor a black tile for TileRequest.
-    fn new(treq: &TileRequest, r: f64, g: f64, b: f64) -> Tile {
+    fn new_with_color(treq: &TileRequest, r: f64, g: f64, b: f64) -> Tile {
         // Return tile        
         let mut tile = Tile { 
             state: TileState::Pending, 
@@ -735,8 +820,8 @@ impl Tile {
             c.paint();
             debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
         } else {
-            // Red tile in case of missing surface
-            c.set_source_rgb(0.8, 0.0, 0.0);
+            // Blue tile in case of missing surface
+            c.set_source_rgb(0.0, 0.0, 0.8);
             c.paint();
         }
         
@@ -757,15 +842,20 @@ impl Tile {
     }
     
     /// Estimates memory usage of the tile in bytes.
-    fn estimate_mem_usage(&self) -> usize {
-        let mut u: usize = mem::size_of::<Tile>();
+    fn estimate_mem_usage(&self) -> isize {
+        let mut u: isize = mem::size_of::<Tile>() as isize;
         if let Some(ref data) = self.data {
-            u += data.len() as usize; // bytes
+            u += data.len() as isize; // bytes
         }
         if self.surface.is_some() && !self.surface_is_temporary {
-            u += (self.width * self.height * 4) as usize; // RGBA assumed
+            u += (self.width * self.height * 4) as isize; // RGBA assumed
         }
         u
+    }
+
+    /// True if flushing reduces memory usage, false otherwise.
+    fn flushable(&self) -> bool {
+        self.data.is_some() || self.surface.is_some()
     }
 
     /// Remove cached tile data from memory    
@@ -776,26 +866,6 @@ impl Tile {
         self.state = TileState::Flushed;
     }
 }
-
-impl Ord for Tile {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.expire_time.cmp(&other.expire_time)
-    }
-}
-
-impl PartialOrd for Tile {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Tile {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-impl Eq for Tile {}
 
 impl fmt::Debug for Tile {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -816,6 +886,50 @@ impl fmt::Debug for Tile {
             self.x, self.y, self.z, self.width, self.height, data_state, self.state)
     }
 }
+
+// ---- TileInfoOrd --------------------------------------------------------------------------------
+
+pub struct TileOrd {
+    key: String,
+    datetime: DateTime<UTC>,
+}
+
+impl TileOrd {
+    pub fn new_with_access_time(tile_key: &String, tile: &Tile) -> TileOrd {
+        TileOrd {
+            key: tile_key.clone(),
+            datetime: tile.access_time,
+        }
+    }
+    
+    pub fn new_with_expire_time(tile_key: &String, tile: &Tile) -> TileOrd {
+        TileOrd {
+            key: tile_key.clone(),
+            datetime: tile.expire_time,
+        }
+    }
+}
+
+impl Ord for TileOrd {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.datetime.cmp(&other.datetime)
+    }
+}
+
+impl PartialOrd for TileOrd {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for TileOrd {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+impl Eq for TileOrd {}
+
 
 // ---- TileRequest --------------------------------------------------------------------------------
 
@@ -849,13 +963,16 @@ pub struct TileRequest {
     pub mult: u8,
 
     /// Source where tiles are loaded.
-    pub source: TileSource,    
+    pub source: TileSource,
     
     /// Load tile from the source even if it was found in disk cache.
     tile_fetch_mode: TileFetchMode,
     
     /// Tile state to be set if tile fetching succeeds.
     tile_state_on_success: TileState,
+    
+    /// True if surface should be created after loading.
+    precautionary: bool,
     
     /// Retry count. This is decreased every time when retried.
     retry_count: Option<u8>,
@@ -870,6 +987,7 @@ impl TileRequest {
             source: source,
             tile_fetch_mode: TileFetchMode::Any,
             tile_state_on_success: TileState::Ready,
+            precautionary: false,
             retry_count: None,
         }
     }
@@ -888,7 +1006,7 @@ impl TileRequest {
     }
     
     /// Unique key of this tile
-    fn to_key(&self) -> String {
+    fn to_key(&self) -> String { // TODO: instead of a String a custom data type would be faster
         format!("{}/{}/{}/{}@{}", self.source.slug, self.z, self.y, self.wrap_x(), self.mult)
     }
 
@@ -899,6 +1017,7 @@ impl TileRequest {
             x: self.wrap_x() / 2, y: self.y / 2, z: self.z - 1, mult: self.mult,
             source: self.source.clone(), tile_fetch_mode: self.tile_fetch_mode,
             tile_state_on_success: TileState::Ready,
+            precautionary: false,
             retry_count: None,
         }
     }
@@ -1204,8 +1323,19 @@ fn receive_treq_result() -> glib::Continue {
                         
                         // Notify tile observer
                         if notify {
+                            let treq = treq_result.request;
+                            if treq.precautionary {
+                                // Precautionary tiles should be loaded beforehand
+                                if let Some(ref mut tile) = tcache.borrow_mut().tiles.get_mut(&treq.to_key()) {
+                                    tile.get_surface();
+                                } else {
+                                    warn!("Precautionary tile not found for: {}", treq.to_key());
+                                }
+                            }
+                            
+                            // Notify tile observer
                             if let Some(observer) = tcache.borrow().observer.clone() {
-                                observer.tile_loaded(&treq_result.request);
+                                observer.tile_loaded(&treq);
                             }
                         }
                     },
@@ -1357,8 +1487,8 @@ impl TileRequestQueue {
         }
     }
 
+    /// Push a new request to the queue to be processed by the tile worker threads..
     fn push_request(&mut self, treq: &TileRequest) {
-        // Add a new request to the queue and notify the worker threads.
         let mut mu = self.new_reqs_mutex.lock().unwrap();
         self.queue.insert(treq.clone());
         *mu = self.queue.len() as u32; // +1 can't work here because treqs can be equal
@@ -1387,6 +1517,23 @@ impl TileRequestQueue {
             None
         }
     }
+    
+    /// Clears any tile request which is not about the given level.
+    pub fn focus_on_zoom_level(&mut self, zoom_level: u8, abort_keys: &mut Vec<String>) {
+        // Create a new queue and copy the wanted elements from the old one
+        let mut mu = self.new_reqs_mutex.lock().unwrap();
+        let mut new_queue: BTreeSet<TileRequest> = BTreeSet::new();
+        for treq in &self.queue {
+            if treq.z == zoom_level {
+                new_queue.insert(treq.clone());
+            } else {
+                abort_keys.push(treq.to_key());
+            }
+        }
+        self.queue = new_queue;
+        *mu = self.queue.len() as u32;
+    }
+
 }
 
 impl fmt::Debug for TileRequestQueue {
@@ -1589,6 +1736,8 @@ mod tests {
     extern crate env_logger;
     //use std::sync::{Arc};
     //use super::hyper::{Client};
+    //use std::thread::{sleep};
+    //use std::collections::{HashMap};
     use super::*;
 
 /*
@@ -1640,5 +1789,41 @@ mod tests {
         assert_eq!(1, TileRequest::new(1, 1, 5, 0, 2, 1, tile_source.clone()).wrap_x());
         
     }
+
+/*    
+    #[test]
+    fn test_tile_order() {
+        let mut tiles: HashMap<String, Tile> = HashMap::new();
+
+        // Source and requests
+        let tile_source = TileSource::new("osm-carto".into(), Vec::new(), "".into(), 256,  256, );
+        let treq1 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
+        let treq2 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
+        let treq3 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
+        
+        // Tiles
+        let tile1 = Tile::new_with_request(&treq1);
+        sleep(time::Duration::from_millis(1));
+        let tile2 = Tile::new_with_request(&treq2);
+        sleep(time::Duration::from_millis(1));
+        let tile3 = Tile::new_with_request(&treq3);
+        assert!(tile1.access_time < tile2.access_time);
+        assert!(tile2.access_time < tile3.access_time);
+        
+        // Insert tiles into list
+        tiles.insert("b".into(), tile1);
+        tiles.insert("a".into(), tile2);
+        tiles.insert("c".into(), tile3);
+
+        // Check order        
+        let mut previous_access_time: Option<DateTime<UTC>> = None;
+        for (ref tile_key, ref mut tile) in tiles.iter() {
+            if let Some(prev_access_time) = previous_access_time {
+                assert!(prev_access_time <= tile.access_time);
+            }
+            previous_access_time = Some(tile.access_time);
+        }
+    }
+*/    
 }
 

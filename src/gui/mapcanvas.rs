@@ -19,6 +19,7 @@ extern crate gio;
 extern crate gdk;
 extern crate glib;
 extern crate cairo;
+extern crate chrono;
 
 use std::rc::{Rc};
 use std::cell::{RefCell};
@@ -29,6 +30,7 @@ use std::collections::{BTreeSet};
 use std::process;
 
 use super::mainwindow::{MapWindow};
+use self::chrono::{UTC};
 use core::tiles::*;
 use geocoord::geo::{PixelPos, Location};
 use gui::floatingtext::*;
@@ -260,9 +262,9 @@ impl MapCanvas {
                         let focus_pos = projection.location_to_global_pixel_pos(map_view.focus.unwrap_or(center), ppdoe) - view_nw_pos;
                         for ly in 0..gh {
                             for lx in 0..gw {
-                                // Priority depends on tile's center's distance from the center
+                                // Priority depends on tile's center's distance from the center and time
                                 let pri_xy = PixelPos::new(lx * tw + tw/2, ly * th + th/2) - focus_pos - offset_pos;
-                                let pri = -pri_xy.cathetus2();
+                                let pri = -pri_xy.cathetus2() + UTC::now().timestamp();
                                 
                                 // Add to the ordered set
                                 treqs.insert(TileRequest::new(map_view.request_generation, pri,
@@ -454,7 +456,7 @@ impl MapCanvas {
                         }
                     } else if dy > 0.0 {
                         // Zoom out
-                        if map_view.zoom_level > 0 {
+                        if map_view.zoom_level >= 3 {
                             map_view.zoom_level -= 1;                
                             map_view.focus = mouse_location;
                             map_view.center = map_view.center.weighted_average(
@@ -473,6 +475,10 @@ impl MapCanvas {
                     } else {
                         map_view.request_generation += 1;
                     }
+                    
+                    // Let cache know that we changed the level.
+                    let mut tcache = map_win.tile_cache.borrow_mut();
+                    tcache.focus_on_zoom_level(map_view.zoom_level);
                 }
             
                 // Request map update

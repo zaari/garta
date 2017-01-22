@@ -85,10 +85,10 @@ pub struct Settings {
     pub http_retry_count: u8,
     
     // Tile memory cache size in bytes. If no limits are wanted this value should be set to None.
-    pub tile_mem_cache_capacity: Option<usize>,
+    pub tile_mem_cache_capacity: Option<isize>,
     
     // Tile disk size in bytes. If no limits are wanted this value should be set to None.
-    pub tile_disk_cache_capacity: Option<u64>,
+    pub tile_disk_cache_capacity: Option<i64>,
     
     /// Map window position and size.
     pub main_window_geometry: String,
@@ -112,7 +112,7 @@ impl Settings {
             http_proxy_auto: true,
             http_proxy_host: None,
             http_proxy_port: None,
-            tile_mem_cache_capacity: Some(10 * 1024 * 1024),
+            tile_mem_cache_capacity: Some(100 * 1024 * 1024),
             tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
             browser_command: "xdg-open".into(),
