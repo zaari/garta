@@ -46,4 +46,5 @@ This is the development roadmap which is subject to change depending on the phas
 ## Version 1.0
 - stable file formats and directory structure
 - improved error handling 
+- removing debug logging from stable parts of the code
 

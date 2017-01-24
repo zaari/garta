@@ -160,7 +160,10 @@ impl Settings {
     }
     
     /// Get cache directory
-    pub fn cache_directory(&self) -> path::PathBuf { string_to_path(&self.cache_directory) }
+    pub fn cache_directory(&self) -> path::PathBuf { 
+        assert_ne!(&self.cache_directory, "");
+        string_to_path(&self.cache_directory) 
+    }
     
     /// Get maximum number of threads
     pub fn worker_threads(&self) -> i32 { 

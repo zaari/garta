@@ -563,16 +563,30 @@ impl TileCache {
         // Read from cache dir
         let mut pathbuf = settings_read().cache_directory();
         pathbuf.push("state");
-        match deserialize_from::<TileCacheState, path::PathBuf>(pathbuf) {
+        match deserialize_from::<TileCacheState, path::PathBuf>(pathbuf.clone()) {
             Ok(mut tcstate) => {
                 tcstate.apply(self);
-                // TODO: remove the state file
                 debug!("Tile cache restored: {:?}", self);
+                
+                // Remove the state file to get the cache cleared on a possible crash
+                match fs::remove_file(pathbuf) {
+                    Ok(()) => { },
+                    Err(e) => {
+                        warn!("Failed to delete cache state file: {}", e);
+                    }
+                }
             },
             Err(e) => {
                 warn!("Failed to restore tile cache state: {}", e);
+                
+                // Clear cache because it may be in an inconsistent state after a crash
                 info!("Clearing tile cache");
-                // TODO: clear cache
+                match fs::remove_dir_all(settings_read().cache_directory()) { // TODO: less dangerous approach
+                    Ok(()) => { },
+                    Err(e) => {
+                        warn!("Failed to clear cache directory: {}", e);
+                    }
+                }
             }
         }
     }
