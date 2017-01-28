@@ -44,6 +44,9 @@ pub static APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub static APP_VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
 pub static APP_VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
 
+/// Default maximum zoom level for maps that don't specify this information.
+pub fn default_max_zoom_level() -> u8 { 16 }
+
 /// A singleton-like construct for settings_read and settings_write methods.
 lazy_static! {
     static ref SETTINGS: RwLock<Settings> = RwLock::new(Settings::new());
@@ -112,7 +115,7 @@ impl Settings {
             http_proxy_auto: true,
             http_proxy_host: None,
             http_proxy_port: None,
-            tile_mem_cache_capacity: Some(100 * 1024 * 1024),
+            tile_mem_cache_capacity: Some(256 * 1024 * 1024),
             tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
             browser_command: "xdg-open".into(),

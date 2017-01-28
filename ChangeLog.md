@@ -4,8 +4,9 @@ All notable changes to Garta project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.0.6]
 ### Added
+- Smooth inertial scrolling for map
 - Unloaded tile approximation by scaling
 - Clicking copyright texts opens the related url in a browser
 

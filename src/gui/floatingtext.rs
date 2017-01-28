@@ -24,7 +24,7 @@ extern crate cairo;
 use std::fmt;
 //use self::gtk::prelude::*;
 
-use geocoord::geo::{PixelPos, PixelBox};
+use geocoord::geo::{Vector, VectorBox};
 
 // ---- FloatingText -------------------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ pub struct FloatingText {
     pub anchor: TextAnchor,
     
     /// Text pivot point on canvas.
-    pub pivot: PixelPos,
+    pub pivot: Vector,
 
     /// The visible text.
     pub text: String,
@@ -63,24 +63,24 @@ pub struct FloatingText {
     pub highlight_rgba: (f64, f64, f64, f64),
     
     /// Font size.
-    pub font_size: i64,
+    pub font_size: f64,
     
     /// Margin between the text and the background rectangle.
-    pub margin: i64,
+    pub margin: f64,
     
     /// If true the text will be highlighted during the next call of 'draw' method.
     pub highlight: bool,
 
     /// Set by the draw method.
-    pub geometry: Option<PixelBox>,
+    pub geometry: Option<VectorBox>,
     
     /// Baseline offset from the top of the area.
-    pub baseline_offset: Option<i64>,
+    pub baseline_offset: Option<f64>,
 }
 
 impl FloatingText {
     /// Constructor.
-    pub fn new(anchor: TextAnchor, pivot: PixelPos, text: String, url: Option<String>) -> FloatingText {
+    pub fn new(anchor: TextAnchor, pivot: Vector, text: String, url: Option<String>) -> FloatingText {
         FloatingText {
             anchor: anchor,
             pivot: pivot,
@@ -89,8 +89,8 @@ impl FloatingText {
             fg_rgba: (0.0, 0.0, 0.0, 1.0),
             bg_rgba: (1.0, 1.0, 1.0, 0.3),
             highlight_rgba: (0.6, 0.8, 1.0, 1.0),
-            font_size: 12,
-            margin: 3,
+            font_size: 12.0,
+            margin: 3.0,
             highlight: false,
             geometry: None,
             baseline_offset: None,
@@ -98,7 +98,7 @@ impl FloatingText {
     }
 
     /// True if the given pos is inside the geometry.
-    pub fn contains(&self, pos: PixelPos) -> bool {
+    pub fn contains(&self, pos: Vector) -> bool {
         if let Some(geometry) = self.geometry {
             geometry.contains(pos)
         } else {
@@ -107,7 +107,9 @@ impl FloatingText {
     }
     
     /// Called by canvas draw method.
-    pub fn draw(&mut self, c: &cairo::Context, offset: PixelPos) {
+    pub fn draw<F>(&mut self, c: &cairo::Context, offset: Vector, cr: F) 
+        where F: Fn(f64) -> f64
+    {
         // Choose font
         c.select_font_face("sans-serif", cairo::FontSlant::Normal, cairo::FontWeight::Normal);
         c.set_font_size(self.font_size as f64);
@@ -119,33 +121,33 @@ impl FloatingText {
         let ext = c.text_extents(self.text.as_str());
         let (bx, by, tx, ty) = match self.anchor {
             TextAnchor::NorthWest => {
-                (0, 0, 0, 0)
+                (0.0, 0.0, 0.0, 0.0)
             }
             TextAnchor::NorthEast => {
-                (0, 0, 0, 0)
+                (0.0, 0.0, 0.0, 0.0)
             }
             TextAnchor::SouthEast => {
-                (origin.x - ext.width as i64 - margin, 
-                origin.y - ext.height as i64 - 2 * margin, 
-                origin.x - ext.width as i64, 
-                origin.y - font_ext.descent as i64 - margin)
+                (origin.x - ext.width - margin, 
+                origin.y - ext.height - 2.0 * margin, 
+                origin.x - ext.width, 
+                origin.y - font_ext.descent - margin)
             }
             TextAnchor::South => {
-                (0, 0, 0, 0)
+                (0.0, 0.0, 0.0, 0.0)
             }
             TextAnchor::SouthWest => {
-                (0, 0, 0, 0)
+                (0.0, 0.0, 0.0, 0.0)
             }
         };
-        let geometry = PixelBox::new(
-            PixelPos::new(bx, by), 
-            PixelPos::new(bx + ext.width as i64 + 2 * margin, by + ext.height as i64 + 2 * margin));
+        let geometry = VectorBox::new(
+            Vector::new(bx, by), 
+            Vector::new(bx + ext.width + 2.0 * margin, by + ext.height + 2.0 * margin));
         self.geometry = Some(geometry);
-        self.baseline_offset = Some(margin + font_ext.height as i64);
+        self.baseline_offset = Some(margin + font_ext.height);
         
         // Draw a background box
         c.set_source_rgba(self.bg_rgba.0, self.bg_rgba.1, self.bg_rgba.2, self.bg_rgba.3);
-        c.rectangle(geometry.x() as f64, geometry.y() as f64, geometry.width() as f64, geometry.height() as f64);
+        c.rectangle(cr(geometry.x()), cr(geometry.y()), cr(geometry.width()), cr(geometry.height()));
         c.fill();
 /* TODO: rounded borders
 	    c.new_sub_path ();
@@ -170,7 +172,7 @@ impl FloatingText {
                     self.fg_rgba.2, 
                     self.fg_rgba.3);
         }
-        c.move_to(tx as f64, ty as f64);
+        c.move_to(cr(tx), cr(ty));
         c.show_text(self.text.as_str());
     }
     

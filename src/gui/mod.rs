@@ -19,11 +19,11 @@ extern crate gtk;
 pub use self::mapcanvas::*;
 pub mod mapcanvas;
 
-pub use self::floatingtext::*;
-pub mod floatingtext;
-
 pub use self::mainwindow::*;
 pub mod mainwindow;
+
+pub use self::floatingtext::*;
+pub mod floatingtext;
 
 /// Run main loop
 pub fn main() {

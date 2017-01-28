@@ -22,99 +22,146 @@ extern crate serde_json;
 use std::f64::consts;
 use std::fmt;
 use std::time;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul, Div};
 use self::regex::{Regex};
 
-// ---- PixelPos -----------------------------------------------------------------------------------
+// ---- Vector -------------------------------------------------------------------------------------
 
-/// View position in pixels.
+/// A simple floating point number pair. In this library this is used to show pixel position.
 #[derive(Copy, Serialize, Deserialize, Clone)]
-pub struct PixelPos {
-    pub x: i64,
-    pub y: i64,
+pub struct Vector {
+    pub x: f64,
+    pub y: f64,
 }
 
-impl PixelPos {
-    /// Constructor.
+impl Vector {
+    /// Constructor from f64 pair.
     #[inline] 
-    pub fn new(x: i64, y: i64) -> PixelPos {
-        PixelPos{x: x, y: y}
+    pub fn new(x: f64, y: f64) -> Vector {
+        Vector{x: x, y: y}
+    }
+
+    /// Constructor from i32 tuple.
+    #[inline] 
+    pub fn with_i32(pos: (i32, i32)) -> Vector {
+        Vector{x: pos.0 as f64, y: pos.1 as f64}
     }
 
     /// Constructor from a f64 tuple.
     #[inline] 
-    pub fn new_with_f64_tuple(xy: (f64, f64)) -> PixelPos {
-        PixelPos{x: xy.0 as i64, y: xy.1 as i64}
+    pub fn with_tuple(xy: (f64, f64)) -> Vector {
+        Vector{x: xy.0, y: xy.1}
     }
     
-    // Constructor which converts f64 coordinates to i64, just for convenience.
+    /// Constructor a zero vector.
     #[inline] 
-    pub fn new_with_f64(x: f64, y: f64) -> PixelPos {
-        PixelPos{x: x as i64, y: y as i64}
+    pub fn zero() -> Vector {
+        Vector{x: 0.0, y: 0.0}
+    }
+
+    /// True if exactly {0.0, 0.0}.
+    #[inline] 
+    pub fn is_zero(&self) -> bool {
+        self.x == 0.0 && self.y == 0.0
     }
     
+    /// Return an inverted vector.
+    #[inline] 
+    pub fn invert(&self) -> Vector {
+        Vector{x: -self.x, y: -self.y}
+    }
+
     /// Power 2 of length of the cathetus.
     #[inline] 
-    pub fn cathetus2(&self) -> i64 {
+    pub fn cathetus2(&self) -> f64 {
         self.x * self.x + self.y * self.y
     }
     
-    /// True if (0,0).
-    #[inline] 
-    pub fn is_origin(&self) -> bool {
-        self.x == 0 && self.y == 0
+    /// Length of the cathetus.
+    pub fn cathetus(&self) -> f64 {
+        (self.cathetus2() as f64).sqrt()
     }
 }
 
-impl Sub for PixelPos {
-    type Output = PixelPos;
+impl Sub for Vector {
+    type Output = Vector;
 
-    fn sub(self, other: PixelPos) -> PixelPos {
-        PixelPos {
+    fn sub(self, other: Vector) -> Vector {
+        Vector {
             x: self.x - other.x,
             y: self.y - other.y,
         }
     }
 }
 
-impl Add for PixelPos {
-    type Output = PixelPos;
+impl Add for Vector {
+    type Output = Vector;
 
-    fn add(self, other: PixelPos) -> PixelPos {
-        PixelPos {
+    fn add(self, other: Vector) -> Vector {
+        Vector {
             x: self.x + other.x,
             y: self.y + other.y,
         }
     }
 }
 
-impl PartialEq for PixelPos {
+impl Mul<f64> for Vector {
+    type Output = Vector;
+
+    fn mul(self, rhs: f64) -> Vector {
+        Vector {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
+
+impl Div<f64> for Vector {
+    type Output = Vector;
+
+    fn div(self, rhs: f64) -> Vector {
+        Vector {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
+impl PartialEq for Vector {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
     }
 }
 
-impl fmt::Debug for PixelPos {
+/*
+impl From<PixelPos> for Vector {
+    fn from(pos: PixelPos) -> Vector {
+        Vector::with_pixelpos(pos)
+    }
+}
+*/
+
+impl fmt::Debug for Vector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({},{})", self.x, self.y)
     }
 }
 
-// ---- PixelBox -----------------------------------------------------------------------------------
+// ---- VectorBox ----------------------------------------------------------------------------------
 
 /// Rectangular area consisting of pixels.
 #[derive(Copy, Serialize, Deserialize, Clone)]
-pub struct PixelBox {
-    pub nw_corner: PixelPos,
-    pub se_corner: PixelPos,
+pub struct VectorBox {
+    pub nw_corner: Vector,
+    pub se_corner: Vector,
 }
 
-impl PixelBox {
+impl VectorBox {
     /// Constructor of two points.
-    pub fn new(nw: PixelPos, se: PixelPos) -> PixelBox {
+    pub fn new(nw: Vector, se: Vector) -> VectorBox {
         assert!(nw.x < se.x);
         assert!(nw.y < se.y);
-        PixelBox {
+        VectorBox {
             nw_corner: nw,
             se_corner: se,
         }
@@ -122,56 +169,55 @@ impl PixelBox {
     
     /// True if the given pos is inside the box.
     #[inline] 
-    pub fn contains(&self, pos: PixelPos) -> bool {
+    pub fn contains(&self, pos: Vector) -> bool {
         self.nw_corner.x <= pos.x && pos.x <= self.se_corner.x &&
         self.nw_corner.y <= pos.y && pos.y <= self.se_corner.y
     }
     
     /// Get x coordinate of the northwest corner.
-    pub fn x(&self) -> i64 {
+    pub fn x(&self) -> f64 {
         self.nw_corner.x
     }
     
     /// Get y coordinate of the northwest corner.
-    pub fn y(&self) -> i64 {
+    pub fn y(&self) -> f64 {
         self.nw_corner.y
     }
     
     /// Width of the box
-    pub fn width(&self) -> i64 {
+    pub fn width(&self) -> f64 {
         self.se_corner.x - self.nw_corner.x
     }
     
     /// Width of the box
-    pub fn height(&self) -> i64 {
+    pub fn height(&self) -> f64 {
         self.se_corner.y - self.nw_corner.y
     }
 }
 
-impl fmt::Debug for PixelBox {
+impl fmt::Debug for VectorBox {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{:?}-{:?}]", self.nw_corner, self.se_corner)
     }
 }
 
-// PixelBox - PixelPos
-impl Sub<PixelPos> for PixelBox {
-    type Output = PixelBox;
+// VectorBox - Vector
+impl Sub<Vector> for VectorBox {
+    type Output = VectorBox;
 
-    fn sub(self, rhs: PixelPos) -> PixelBox {
-        PixelBox::new(self.nw_corner - rhs, self.se_corner - rhs)
+    fn sub(self, rhs: Vector) -> VectorBox {
+        VectorBox::new(self.nw_corner - rhs, self.se_corner - rhs)
     }
 }
 
-// PixelBox + PixelPos
-impl Add<PixelPos> for PixelBox {
-    type Output = PixelBox;
+// VectorBox + Vector
+impl Add<Vector> for VectorBox {
+    type Output = VectorBox;
 
-    fn add(self, rhs: PixelPos) -> PixelBox {
-        PixelBox::new(self.nw_corner + rhs, self.se_corner + rhs)
+    fn add(self, rhs: Vector) -> VectorBox {
+        VectorBox::new(self.nw_corner + rhs, self.se_corner + rhs)
     }
 }
-
 
 // ---- Location -----------------------------------------------------------------------------------
 
@@ -235,9 +281,15 @@ impl Location {
         Err(format!("bad location: {}", lat_lon_str))
     }
 
+    pub fn weighted_average(&self, other: &Location, weight: f64) -> Location {
+        let r = self.weighted_average_(other, weight);
+        debug!("weighted_average: {} + {} -> {}", self, other, r);
+        r
+    }
+
     /// Create a weighted average copy. Value 0.5 results a mid-point between self and other.
     /// Value 0.0 results copy of self and value 1.0 copy of the other.
-    pub fn weighted_average(&self, other: &Location, weight: f64) -> Location {
+    pub fn weighted_average_(&self, other: &Location, weight: f64) -> Location {
         // TODO: bugs when the location are on different sides of 180°E/-180°W line
         if weight == 0.0 {
             self.clone()
@@ -480,6 +532,16 @@ impl Location {
     }
 }
 
+impl PartialEq for Location {
+    fn eq(&self, other: &Self) -> bool {
+        self.lat == other.lat && 
+        self.lon == other.lon && 
+        self.elevation == other.elevation &&
+        self.time == other.time
+    }
+}
+
+
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.lat >= 0.0 {
@@ -649,7 +711,7 @@ impl Projection {
 
     /// Converts coordinates to pixel position (with origin at 0°N 0°E).
     /// Parameter 'ppdoe' is pixels per degree on equator.
-    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos {
+    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> Vector {
         match *self {
             Projection::Mercator(ref p) => { p.location_to_global_pixel_pos(loc, ppdoe) }
         }
@@ -657,14 +719,14 @@ impl Projection {
     
     /// Converts pixel position (with origin at 0°N 0°E) to coordinates.
     /// Parameter 'ppdoe' is pixels per degree on equator.
-    pub fn global_pixel_pos_to_location(&self, pp: PixelPos, ppdoe: f64) -> Location {
+    pub fn global_pixel_pos_to_location(&self, pp: Vector, ppdoe: f64) -> Location {
         match *self {
             Projection::Mercator(ref p) => { p.global_pixel_pos_to_location(pp, ppdoe) }
         }
     }
     
     // Returns gobal pixel position of the "top left" corner of the projection.
-    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos {
+    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> Vector {
         match *self {
             Projection::Mercator(ref mut p) => { p.northwest_global_pixel(ppdoe) }
         }
@@ -676,34 +738,34 @@ impl Projection {
 /// Mercator projection-realted position conversion math.
 pub struct MercatorProjection { 
     current_ppdoe: f64,
-    current_northwest_global_pixel: PixelPos,
+    current_northwest_global_pixel: Vector,
 }
 
 /// Mercator projection coordinate conversions. 
 /// https://en.wikipedia.org/wiki/Mercator_projection#Inverse_transformations
 impl MercatorProjection {
     pub fn new() -> MercatorProjection {
-        MercatorProjection{current_ppdoe: -1.0, current_northwest_global_pixel: PixelPos::new(0, 0)}
+        MercatorProjection{current_ppdoe: -1.0, current_northwest_global_pixel: Vector::zero()}
     }
 
     #[inline] 
-    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> PixelPos {
+    pub fn location_to_global_pixel_pos(&self, loc: Location, ppdoe: f64) -> Vector {
         const R: f64 = 360.0 / (2.0 * consts::PI);
         let phi = loc.lat * consts::PI / 180.0;
         let y = R * asinh(tan(phi));
-        PixelPos::new((loc.lon * ppdoe) as i64, (-y * ppdoe) as i64)
+        Vector::new((loc.lon * ppdoe), (-y * ppdoe))
     }
     
     #[inline] 
-    pub fn global_pixel_pos_to_location(&self, pos: PixelPos, ppdoe: f64) -> Location {
+    pub fn global_pixel_pos_to_location(&self, pos: Vector, ppdoe: f64) -> Location {
         const R: f64 = 360.0 / (2.0 * consts::PI);
         let y = pos.y as f64 / ppdoe;
         let phi = asin(tanh(y / R));
-        Location::new(-phi * 180.0 / consts::PI, pos.x as f64 / ppdoe)
+        Location::new(-phi * 180.0 / consts::PI, pos.x / ppdoe)
     }
 
     #[inline] 
-    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> PixelPos {
+    pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> Vector {
         if self.current_ppdoe != ppdoe {
             // The northwest corner based on Mercator projection definition
             let nw_loc = Location::new(consts::PI.sinh().atan() * 180.0 / consts::PI, -180.0);
@@ -926,14 +988,45 @@ mod tests {
         let mut mer = MercatorProjection::new();
         let pp = mer.northwest_global_pixel(1.0);
         debug!("mer: {:?}", mer.northwest_global_pixel(1.0));
-        assert!(pp.x == -180 && pp.y == -179);
+        assert_eq!(pp.x.round(), -180.0);
+        assert_eq!(pp.y.round(), -180.0);
         
         let tw = 256;
         let zoom_level = 1;
         let ppdoe = ((tw as u64) << ((zoom_level - 1) as u64)) as f64 / 360.0;
         let pp = mer.location_to_global_pixel_pos(Location::new(0.0, 0.0), ppdoe);
-        assert_eq!(pp.x, 0);
-        assert_eq!(pp.y, 0);
+        assert!(pp.is_zero());
+    }
+
+    #[test]
+    fn test_vector() {
+        // Zero vector
+        let v0 = Vector::zero();
+        assert!(v0.is_zero());
+        
+        // Cathetus
+        let v1 = Vector::new(4.0, 3.0);
+        assert_eq!(v1.cathetus(), 5.0);
+        
+        // Equality
+        let v2 = Vector::new(4.0, 3.0);
+        assert_eq!(v1, v2);
+        
+        // Multiply
+        let v3 = v2 * 2.0;
+        assert_eq!(v3, Vector::new(8.0, 6.0));
+        
+        // Sum
+        let v4 = v3 + v2;
+        assert_eq!(v4, Vector::new(12.0, 9.0));
+        
+        // Substract
+        let v5 = v2 - v3;
+        assert_eq!(v5, Vector::new(-4.0, -3.0));
+        
+        // Invert
+        let v6 = v5.invert();
+        assert_eq!(v6, Vector::new(4.0, 3.0));
     }
 }
 

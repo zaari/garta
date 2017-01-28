@@ -23,17 +23,19 @@
 #[macro_use] extern crate log;
 extern crate env_logger;
 
+mod geocoord;
 mod core;
 mod gui;
-mod geocoord;
 
 use std::cell::{RefCell};
 use std::process::{exit};
+use std::time::{Instant};
 
 use core::settings::{settings_write, settings_read, APP_NAME, APP_VERSION};
 use core::tiles::{create_tile_cache};
 use core::atlas::{Atlas, Layer, Map, MapToken, MapView};
 use core::persistence::*;
+use core::misc::{duration_to_seconds};
 
 fn main() {
     // Initialize logger
@@ -48,8 +50,10 @@ fn main() {
     }
     
     // Initialize tile cache
-    info!("Initialize tile cache");
+    let tcache_time0 = Instant::now();
+    info!("Initializing tile cache");
     let tcache_rrc = create_tile_cache();
+    info!("Cache initialized in {:.3} seconds", duration_to_seconds(&tcache_time0.elapsed()));
 
     // Create atlas
     let atlas = RefCell::new(Atlas::new("unnamed".into()));
@@ -85,6 +89,8 @@ fn main() {
         let l2 = Layer::new("Layer 2".into(), 2); atlas.borrow_mut().layers.insert(l2.id(), l2);
         let l3 = Layer::new("Layer 3".into(), 3); atlas.borrow_mut().layers.insert(l3.id(), l3);
     }
+
+    // Load atlas...
 
     // Load map view
     let map_view = RefCell::new(MapView::restore());

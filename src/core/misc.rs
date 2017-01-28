@@ -27,4 +27,3 @@ pub fn duration_to_seconds(i: &Duration) -> f64 {
     (secs + 0.000000001 * nsecs)
 }
 
-

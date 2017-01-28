@@ -35,7 +35,7 @@ This is the development roadmap which is subject to change depending on the phas
 - 2x tile support
 
 ## Version 0.7
-- vehicle types
+- vehicles and modes
 - track replay
 
 ## Version 0.8

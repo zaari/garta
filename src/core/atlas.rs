@@ -25,7 +25,7 @@ use geocoord::geo::{Location, Projection};
 use core::elements::*;
 use core::id::{UniqueId};
 use core::tiles::{TileSource};
-use core::settings::{settings_read};
+use core::settings::{settings_read, default_max_zoom_level};
 use core::persistence::*;
 
 // ---- Atlas --------------------------------------------------------------------------------------
@@ -245,6 +245,9 @@ pub struct Map {
     #[serde(default)]
     pub tile_height: Option<i32>,
     
+    #[serde(default = "default_max_zoom_level")]
+    pub max_zoom_level: u8,
+    
     #[serde(default)]
     pub transparent: bool,
 
@@ -272,6 +275,7 @@ impl Map {
             name: "".into(),
             tile_width: None,
             tile_height: None,
+            max_zoom_level: default_max_zoom_level(),
             transparent: false,
             dark: false,
             urls: Vec::new(),
@@ -383,10 +387,6 @@ pub struct MapView {
     /// Coordinates format used within the view.
     pub coordinates_format: String,
     
-    /// Tile request generation.
-    #[serde(skip_serializing, default)]
-    pub request_generation: u64,
-    
     /// Window x and y position in pixels.
     pub window_position: Option<(i32, i32)>,
     
@@ -403,7 +403,6 @@ impl MapView {
             visible_layer_ids: LinkedList::new(),
             map_slug: "".into(),
             coordinates_format: "dm".into(),
-            request_generation: 1,
             window_position: None,
             window_size: None,
         }

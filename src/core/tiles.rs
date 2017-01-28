@@ -282,6 +282,9 @@ impl TileCache {
                     self.queue_precautionary_request(&treq, -3, -1,  0, 1);
                     self.queue_precautionary_request(&treq, -3,  0, -1, 1);
                     self.queue_precautionary_request(&treq, -3,  0,  1, 1);
+                    self.queue_precautionary_request(&treq, -6,  0,  0, 0);
+                    self.queue_precautionary_request(&treq, -9,  0,  0, 0);
+                    self.queue_precautionary_request(&treq, -12,  0,  0, 0);
                 }
             } else {
                 debug!("Created an approximation treq_up={:?}", treq_up);
@@ -314,6 +317,11 @@ impl TileCache {
     /// Request a precautionary tile for the given tile offset. Does nothing if the 
     /// request is out of range.
     fn queue_precautionary_request(&mut self, base_treq: &TileRequest, delta_z: i8, delta_x: i8, delta_y: i8, delta_pri: i8) {
+        // Do nothing if the requested zoom level is out of range
+        if base_treq.z as i8 + delta_z < 0 {
+            return;
+        }
+    
         // Delta-Z
         let mut treq = base_treq.clone();
         for i in 0..(-delta_z) {
@@ -326,11 +334,11 @@ impl TileCache {
         let side = 1 << treq.z;
         
         // Delta-X
-        treq.x += delta_x as i64;
+        treq.x += delta_x as i32;
         if treq.x < 0 || treq.x >= side { return }
         
         // Delta-Y
-        treq.y += delta_y as i64;
+        treq.y += delta_y as i32;
         if treq.y < 0 || treq.y >= side { return }
 
         // Enqueue a request if tile is not being loaded
@@ -682,10 +690,10 @@ pub struct Tile {
     pub state: TileState,
 
     /// x coordinate (range is 0..2^z)
-    x: i64,
+    x: i32,
     
     /// y coordinate (range is 0..2^z)
-    y: i64,
+    y: i32,
     
     /// zoom level
     z: u8,
@@ -789,8 +797,8 @@ impl Tile {
     }
 
     // Getters   
-    pub fn x(&self) -> i64 { self.x }
-    pub fn y(&self) -> i64 { self.y }
+    pub fn x(&self) -> i32 { self.x }
+    pub fn y(&self) -> i32 { self.y }
     pub fn z(&self) -> u8 { self.z }
     pub fn mult(&self) -> u8 { self.mult }
     pub fn width(&self) -> i32 { self.width }
@@ -965,10 +973,10 @@ pub struct TileRequest {
     priority: i64,
     
     /// X-position
-    pub x: i64,
+    pub x: i32,
     
     /// Y-position
-    pub y: i64,
+    pub y: i32,
     
     /// Zoom level
     pub z: u8,
@@ -994,7 +1002,7 @@ pub struct TileRequest {
 
 impl TileRequest {
     /// Constructor for a tile request.
-    pub fn new(generation: u64, priority: i64, x: i64, y: i64, z: u8, mult: u8, source: TileSource) -> TileRequest {
+    pub fn new(generation: u64, priority: i64, x: i32, y: i32, z: u8, mult: u8, source: TileSource) -> TileRequest {
         TileRequest {
             generation: generation, priority: priority, 
             x: x, y: y, z: z, mult: mult,
@@ -1007,7 +1015,7 @@ impl TileRequest {
     }
     
     /// If x is out of bounds wrap it.
-    pub fn wrap_x(&self) -> i64 {
+    pub fn wrap_x(&self) -> i32 {
         let mut x = self.x;
         let w = 1 << self.z;
         while x < 0 {
