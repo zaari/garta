@@ -28,13 +28,13 @@ use std::time::{Instant, Duration};
 use std::collections::{BTreeSet, VecDeque};
 use std::process;
 use self::gtk::prelude::*;
-use self::cairo::{Format, ImageSurface};
 
 use super::mainwindow::{MapWindow};
 use self::chrono::{UTC};
 use core::tiles::*;
 use geocoord::geo::{Vector, Location, Projection};
 use gui::floatingtext::*;
+use gui::sprite::{Sprite};
 use core::settings::{settings_read};
 
 // Animation frames per second
@@ -54,6 +54,9 @@ const ANIMATION_SCROLL_SPEED_LIMIT: f64 = 2000.0;
 
 // Scroll speed decay ratio per second
 const ANIMATION_SCROLL_DECAY: f64 = 0.046;
+
+// Zoom animation duration in seconds.
+const ANIMATION_ZOOM_DURATION: f64 = 0.25;
 
 #[derive(Debug, PartialEq)]
 pub enum MapCanvasMode {
@@ -89,8 +92,7 @@ pub struct MapCanvas {
     mode: RefCell<MapCanvasMode>,
     
     // Temporary surface for tile grid
-    tile_surface: RefCell<Option<ImageSurface>>,
-    tile_surface_size: RefCell<(i32, i32)>,
+    tile_sprite: RefCell<Option<Sprite>>,
     
     // Mouse location of the previous event.
     orig_pos: RefCell<Vector>,
@@ -103,10 +105,35 @@ pub struct MapCanvas {
     // canvas corner.
     scroll_history: RefCell<VecDeque<(Vector, Instant)>>,
     
-    // In ZoomAnimation mode, the speed vector of scrolling.
+    // In ScrollAnimation mode, the speed vector of scrolling.
     scroll_speed_vec: RefCell<Vector>,
+    
+    // Previous animation frame time.
     scroll_prev_time: RefCell<Instant>,
+
+    // View center position in pixels to avoid to/from conversions of the center.
     scroll_center_fpos: RefCell<Vector>,
+    
+    // True if zooming, false if zooming out.
+    zoom_in: RefCell<bool>,
+    
+    // Start time of the zoom animation
+    zoom_start_time: RefCell<Instant>,
+    
+    // Zoom animation zoom factor (0.5 .. 1.0).
+    zoom_factor: RefCell<f64>,
+    
+    // Zoom animation factor target value.
+    zoom_factor_target: RefCell<f64>,
+
+    // Zoom tile surface
+    zoom_sprite: RefCell<Option<Sprite>>,
+    
+    // Mouse location when starting zoom animation
+    zoom_mouse_position: RefCell<Vector>,
+    
+    /// Queue for mouse wheel operations. The values are (-1|1, mouse_wpos).
+    mouse_wheel_op_queue: RefCell<VecDeque<(i8, Vector)>>,
 }
 
 impl MapCanvas {
@@ -116,8 +143,7 @@ impl MapCanvas {
             float_texts_se: RefCell::new(Vec::new()),
             map_win: None,
             mode: RefCell::new(MapCanvasMode::Void),
-            tile_surface: RefCell::new(None),
-            tile_surface_size: RefCell::new((0, 0)),
+            tile_sprite: RefCell::new(None),
             orig_pos: RefCell::new(Vector::zero()),
             orig_center: RefCell::new(Location::new(0.0, 0.0)),
             accuracy: RefCell::new(None),
@@ -125,6 +151,13 @@ impl MapCanvas {
             scroll_speed_vec: RefCell::new(Vector::zero()),
             scroll_prev_time: RefCell::new(Instant::now()),
             scroll_center_fpos: RefCell::new(Vector::zero()),
+            zoom_in: RefCell::new(true),
+            zoom_start_time: RefCell::new(Instant::now()),
+            zoom_factor: RefCell::new(1.0),
+            zoom_factor_target: RefCell::new(1.0),
+            zoom_sprite: RefCell::new(None),
+            zoom_mouse_position: RefCell::new(Vector::zero()),
+            mouse_wheel_op_queue: RefCell::new(VecDeque::new()),
         }
     }
 
@@ -273,8 +306,75 @@ impl MapCanvas {
                     // Map projection
                     let mut projection = map.as_projection();
                     
-                    // Draw tiles
+                    // Tiles
                     if let Some(tile_source) = map.to_tile_source(&atlas.tokens) {
+                        // Zoom animation iteration
+                        let zoom_in = *self.zoom_in.borrow();
+                        let mut draw_tiles = true;
+                        let mut paint_tiles = true;
+                        if *self.mode.borrow() == MapCanvasMode::ZoomAnimation {
+                            draw_tiles = false;
+                            paint_tiles = false;
+                            
+                            // Make the old tile surface if it doesn't exist for this zoom anim already
+                            let zoom_mouse_position = *self.zoom_mouse_position.borrow();
+                            if self.zoom_sprite.borrow().is_none() {
+                                if zoom_in {
+                                    *self.zoom_sprite.borrow_mut() = self.tile_sprite.borrow().clone();
+                                } else {
+                                    draw_tiles = true;
+                                    paint_tiles = false;
+                                }
+                            }
+                        
+                            // Transform for the old tile surface
+                            c.save();
+                            let (zmpx, zmpy) = zoom_mouse_position.as_tuple();
+                            let x_weight = zmpx / vw;
+                            let y_weight = zmpy / vh;
+                            if let Some(ref zoom_sprite) = *self.zoom_sprite.borrow() {
+                                let zoom_factor = {
+                                    if zoom_in {
+                                        *self.zoom_factor.borrow()
+                                    } else {
+                                        *self.zoom_factor.borrow() * 2.0
+                                    }
+                                };
+                                c.translate(-x_weight * (zoom_factor - 1.0) * vw, 
+                                            -y_weight * (zoom_factor - 1.0) * vh);
+                                c.scale(zoom_factor, zoom_factor);
+                            }
+                            
+                            // Draw the old tile surface
+                            if let Some(ref zoom_sprite) = *self.zoom_sprite.borrow() {
+                                // Background color
+                                c.set_source_rgb(background_color.0, background_color.1, background_color.2);
+                                c.paint();
+
+                                c.set_source_surface(&zoom_sprite.surface, -zoom_sprite.offset.x, -zoom_sprite.offset.y);
+                                c.paint();
+                            }
+
+                            // Reset context state                            
+                            c.restore();
+                            c.save();
+
+                            // Transform for the new tiles
+                            if draw_tiles {
+                                let zoom_factor = *self.zoom_factor.borrow();
+                                c.translate(0.5 * x_weight * (2.0 - zoom_factor) * vw, 
+                                            0.5 * y_weight * (2.0 - zoom_factor) * vh);
+                                c.scale(0.5 * zoom_factor, 0.5 * zoom_factor);
+                            }
+                        } else {
+                            // Background color
+                            c.set_source_rgb(background_color.0, background_color.1, background_color.2);
+                            c.paint();
+                        }
+                    
+                        // Tile cache    
+                        let mut tcache = map_win.tile_cache.borrow_mut();
+
                         // Compute tile grid dimensions at the current zoom level
                         let tw = tile_source.tile_width as f64;
                         let th = tile_source.tile_height as f64;
@@ -289,26 +389,17 @@ impl MapCanvas {
                                 (view_nw_pos.x - global_nw_pos.x) % tw, 
                                 (view_nw_pos.y - global_nw_pos.y) % th);
                         //debug!("{:?} - {:?} = {:?}", center_pos, Vector::new(vw / 2, vh / 2), view_nw_pos);
-                        let gx = ((view_nw_pos.x - global_nw_pos.x) / tw) as i32;
-                        let gy = ((view_nw_pos.y - global_nw_pos.y) / th) as i32;
-                        let gw = ((vw + tw - 1.0) / tw + 1.0) as i32;
-                        let gh = ((vh + th - 1.0) / th + 1.0) as i32;
-                    
-                        // Tile cache    
-                        let mut tcache = map_win.tile_cache.borrow_mut();
-
-                        // Background color
-                        c.set_source_rgb(background_color.0, background_color.1, background_color.2);
-                        c.paint();
-
-                        //debug!("ppdoe={} zoom_level={} gx={} gy={} gw={} gh={} tw={} th={}", ppdoe, zoom_level, gx, gy, gw, gh, tw, th);
+                        let grid_x = ((view_nw_pos.x - global_nw_pos.x) / tw) as i32;
+                        let grid_y = ((view_nw_pos.y - global_nw_pos.y) / th) as i32;
+                        let grid_w = ((vw + tw - 1.0) / tw + 1.0) as i32;
+                        let grid_h = ((vh + th - 1.0) / th + 1.0) as i32;
 
                         // Create an ordered list of tile requests
                         let mut treqs: BTreeSet<TileRequest> = BTreeSet::new();
                         let focus_pos = projection.location_to_global_pixel_pos(map_view.focus.unwrap_or(center), ppdoe) - view_nw_pos;
                         let gen = UTC::now().timestamp() as u64;
-                        for ly in 0..gh {
-                            for lx in 0..gw {
+                        for ly in 0..grid_h {
+                            for lx in 0..grid_w {
                                 // Priority depends on tile's center's distance from the center and time
                                 let pri_xy = Vector::new(lx as f64 * tw + tw/2.0, 
                                                          ly as f64 * th + th/2.0) 
@@ -317,46 +408,94 @@ impl MapCanvas {
                                 
                                 // Add to the ordered set
                                 treqs.insert(TileRequest::new(gen, pri as i64,
-                                    gx + lx as i32, gy + ly as i32, zoom_level, mult, tile_source.clone()));
+                                    grid_x + lx as i32, 
+                                    grid_y + ly as i32, zoom_level, 
+                                    mult, tile_source.clone()));
                             }
                         }
 
                         // Use a separate image surface for tiles to avoid seams when not rounding
-                        let mut tile_surface_size = self.tile_surface_size.borrow_mut();
-                        let mut tile_surface = self.tile_surface.borrow_mut();
-                        let tssz = ((gw as f64 * tw) as i32, (gh as f64 * th) as i32);
-                        if tile_surface.is_none() || *tile_surface_size != tssz {
-                            *tile_surface = Some(ImageSurface::create(Format::Rgb24, tssz.0, tssz.1));
-                            *tile_surface_size = tssz;
+                        let mut tile_sprite_o = self.tile_sprite.borrow_mut();
+                        if tile_sprite_o.is_none() {
+                            *tile_sprite_o = Some(Sprite::with_offset(
+                                                      (grid_w as f64 * tw) as i32, 
+                                                      (grid_h as f64 * th) as i32,
+                                                      offset_pos,
+                                                      zoom_level, false));
                         }
-                        if let Some(ref tile_surface) = *tile_surface {
-                            let tc = cairo::Context::new(&tile_surface);
+                        if let Some(ref mut tile_sprite) = *tile_sprite_o {
+                            let tc = tile_sprite.to_context();
                             
-                            // Clear surface
-                            c.set_source_rgb(0.8, 0.8, 0.8);
-                            tc.paint();
+                            if draw_tiles {
+                                // Clear surface
+                                tc.set_source_rgb(0.8, 0.8, 0.8);
+                                tc.paint();
+
+                                // Ensure that offset and zoom level are correct in the sprite
+                                tile_sprite.offset = offset_pos;
+                                tile_sprite.zoom_level = zoom_level;
+                            }
                             
                             // Request tiles
                             for treq in treqs.iter().rev() {
                                 // Handle the response
                                 if let Some(tile) = tcache.get_tile(&treq) {
-                                    // Draw tile
-                                    if let Some(ref tile_surface) = tile.get_surface() {
-                                        let lx = treq.x - gx;
-                                        let ly = treq.y - gy;
-                                        let vx = lx as f64 * tw;
-                                        let vy = ly as f64 * th;
-                                        tc.set_source_surface(tile_surface, cr(vx), cr(vy));
-                                        tc.paint();
+                                    if draw_tiles {
+                                        // Draw tile
+                                        if let Some(ref tile_surface) = tile.get_surface() {
+                                            // Draw tile onto sprite                                        
+                                            let lx = treq.x - grid_x;
+                                            let ly = treq.y - grid_y;
+                                            let vx = lx as f64 * tw;
+                                            let vy = ly as f64 * th;
+                                            tc.set_source_surface(tile_surface, cr(vx), cr(vy));
+                                            tc.paint();
+                                        }
                                     }
                                 }
                             }
                             
                             // Paint tile surface onto canvas context
-                            c.set_source_surface(&tile_surface, cr(-offset_pos.x), cr(-offset_pos.y));
-                            c.paint();
+                            if paint_tiles {
+                                c.set_source_surface(&tile_sprite.surface, cr(-offset_pos.x), cr(-offset_pos.y));
+                                c.paint();
+                            }
                         }
 
+                        // Reset transform after the zoom animation drawing section
+                        if *self.mode.borrow() == MapCanvasMode::ZoomAnimation {
+                            c.restore();
+                            
+                            debug!("zoom_spirit.is_some={} zoom_in={}", self.zoom_sprite.borrow().is_some(), zoom_in);
+                            if self.zoom_sprite.borrow().is_none() && !zoom_in {
+                                // Clone
+                                *self.zoom_sprite.borrow_mut() = tile_sprite_o.clone();
+                                
+                                // Transform
+                                c.save();
+                                let zoom_factor = {
+                                    if zoom_in {
+                                        *self.zoom_factor.borrow()
+                                    } else {
+                                        *self.zoom_factor.borrow() * 2.0
+                                    }
+                                };
+                                let (zmpx, zmpy) = self.zoom_mouse_position.borrow().as_tuple();
+                                let x_weight = zmpx / vw;
+                                let y_weight = zmpy / vh;
+                                c.translate(-x_weight * (zoom_factor - 1.0) * vw, 
+                                            -y_weight * (zoom_factor - 1.0) * vh);
+                                c.scale(zoom_factor, zoom_factor);
+                                
+                                // Paint
+                                if let Some(ref zoom_sprite) = *self.zoom_sprite.borrow() {
+                                    c.set_source_surface(&zoom_sprite.surface, -zoom_sprite.offset.x, -zoom_sprite.offset.y);
+                                    c.paint();
+                                }
+                                c.restore();
+                            }
+                        }
+                    
                         // Update accuracy as it's relatively cheap to compute it here
                         let view_se_pos = center_pos + Vector::new(vw / 2.0, vh / 2.0);
                         let view_nw_loc = projection.global_pixel_pos_to_location(view_nw_pos, ppdoe);
@@ -366,6 +505,11 @@ impl MapCanvas {
                             *self.accuracy.borrow_mut() = Some(accuracy);
                         } else {
                             *self.accuracy.borrow_mut() = None;
+                        }
+                        
+                        // Save offset for zoom animation
+                        if let Some(ref mut tile_sprite) = *tile_sprite_o {
+                            tile_sprite.offset = offset_pos;
                         }
                     } else {
                         warn!("No tile source for map {}", &map_view.map_slug);
@@ -392,6 +536,11 @@ impl MapCanvas {
             if ms >= 15.000 {
                 debug!("draw time: {:.3} ms", ms); 
             }
+        }
+
+        // Not an ideal place for this, but well...
+        if *self.mode.borrow() == MapCanvasMode::Void {
+            self.on_void_state();
         }
     }
 
@@ -629,19 +778,40 @@ impl MapCanvas {
     fn scroll_event(&self, ev: &gdk::EventScroll) {
         if let Some(ref map_win) = self.map_win {
             let mut cc = CoordinateContext::new(map_win.clone(), self);
-            if {
-                let mut r = false;
-                if let Some(ref widget) = self.widget {
-                    // Convert mouse position to focus location
-                    let (x, y) = ev.get_position();
-                    let mouse_location = cc.wpos_to_loc(Vector::new(x, y));
-                
-                    let mut map_view = map_win.map_view.borrow_mut();
-                    let (dx, dy) = ev.get_delta();
-                    //debug!("scroll_event: {},{} delta={},{} mouse_location={:?}", x as i32, y as i32, dx, dy, mouse_location);
-                    
-                    // Zoom direction
-                    if dy < 0.0 {
+            let mouse_wpos = Vector::with_tuple(ev.get_position());
+            let mut zoom_op = 0i8;
+
+            if let Some(ref widget) = self.widget {
+                // Zoom direction
+                let (dx, dy) = ev.get_delta();
+                if dy < 0.0 {
+                    // Zoom in
+                    self.mouse_wheel_op_queue.borrow_mut().push_back((1, mouse_wpos));
+                } else if dy > 0.0 {
+                    // Zoom out
+                    self.mouse_wheel_op_queue.borrow_mut().push_back((-1, mouse_wpos));
+                }
+            }
+        }
+        
+        if *self.mode.borrow() == MapCanvasMode::Void {
+            self.on_void_state();
+        }
+    }
+    
+    /// Called after canvas state has been transfered to Void.
+    fn on_void_state(&self) {
+        if let Some(ref map_win) = self.map_win {
+            let mut cc = CoordinateContext::new(map_win.clone(), self);
+            let mut map_view = map_win.map_view.borrow_mut();
+            let center_wpos = cc.loc_to_wpos(map_view.center);
+            
+            // Check mouse wheel queue
+            let mut op_queue = self.mouse_wheel_op_queue.borrow_mut();
+            if let Some((ref op, ref mouse_wpos)) = op_queue.pop_front() {
+                let mut zoom_op = 0i8;
+                match *op {
+                    1 => {
                         // Max zoom level
                         let max_zoom_level = {
                             if let Some(ref map) = map_win.atlas.borrow().maps.get(&map_view.map_slug) {
@@ -653,36 +823,94 @@ impl MapCanvas {
                     
                         // Zoom in
                         if map_view.zoom_level < max_zoom_level {
-                            map_view.focus = Some(mouse_location);
-                            map_view.center = mouse_location.weighted_average(&map_view.center, 0.5);
+                            map_view.focus = Some(cc.wpos_to_loc(*mouse_wpos));
+                            let new_center_pos = mouse_wpos.weighted_average(center_wpos, 0.5);
+                            map_view.center = cc.wpos_to_loc(new_center_pos);
                             map_view.zoom_level += 1;
-                            r = true;
+                            zoom_op = 1;
                         }
-                    } else if dy > 0.0 {
+                    },
+                    -1 => {
                         // Zoom out
                         if map_view.zoom_level >= 3 {
-                            map_view.focus = Some(mouse_location);
-                            map_view.center = mouse_location.weighted_average(&map_view.center, 2.0);
+                            map_view.focus = Some(cc.wpos_to_loc(*mouse_wpos));
+                            let new_center_pos = mouse_wpos.weighted_average(center_wpos, 2.0);
+                            map_view.center = cc.wpos_to_loc(new_center_pos);
                             map_view.zoom_level -= 1;                
-                            r = true;
+                            zoom_op = -1;
                         }
                     }
+                    _ => {
+                        warn!("Unrecognized mouse wheel op: {}", *op);
+                    }
                 }
-                r
-            } {
-                // Change state
-                *self.mode.borrow_mut() = MapCanvasMode::Void; // TODO: Zoom animation mode
-            
-                // Let cache know that we changed the level.
-                {
-                    let map_view = map_win.map_view.borrow();
-                    let mut tcache = map_win.tile_cache.borrow_mut();
-                    tcache.focus_on_zoom_level(map_view.zoom_level);
+                
+                if *op != 0 {
+                    // Let cache know that we changed the level.
+                    {
+                        let mut tcache = map_win.tile_cache.borrow_mut();
+                        tcache.focus_on_zoom_level(map_view.zoom_level);
+                    }
+                    
+                    // GTK timeout closure for the zoom animation
+                    *self.mode.borrow_mut() = MapCanvasMode::ZoomAnimation;
+                    *self.zoom_in.borrow_mut() = { zoom_op == 1 };
+                    *self.zoom_factor.borrow_mut() = 1.0;
+                    *self.zoom_factor_target.borrow_mut() = match zoom_op { -1 => 0.5, 1 => 2.0, _ => {1.0} };
+                    *self.zoom_start_time.borrow_mut() = Instant::now();
+                    *self.zoom_sprite.borrow_mut() = None;
+                    *self.zoom_mouse_position.borrow_mut() = *mouse_wpos;
+                    let map_win_r = map_win.clone();
+                    timeout_add((1000.0 / ANIMATION_FPS) as u32, move || {
+                        let map_canvas = map_win_r.map_canvas.borrow();
+                
+                        // If mode has changed, stop zooming
+                        if *map_canvas.mode.borrow() != MapCanvasMode::ZoomAnimation {
+                            map_win_r.update_map();
+                            *map_canvas.zoom_sprite.borrow_mut() = None;
+                            return Continue(false);
+                        }
+                        
+                        // The current factor
+                        let mut zoom_factor = map_canvas.zoom_factor.borrow_mut();
+                        let zoom_factor_target = *map_canvas.zoom_factor_target.borrow();
+                        let elapsed = duration_to_seconds(&map_canvas.zoom_start_time.borrow_mut().elapsed());
+                        let expected_duration = {
+                            if map_canvas.mouse_wheel_op_queue.borrow().len() > 0 {
+                                ANIMATION_ZOOM_DURATION / 4.0
+                            } else {
+                                ANIMATION_ZOOM_DURATION
+                            }
+                        };
+                        let remaining_time = expected_duration - elapsed;
+                        let remaining_ticks = ANIMATION_FPS * remaining_time;
+                        
+                        // Zoom in/out
+                        if remaining_ticks > 0.0 {
+                            let zoom_factor_step = (zoom_factor_target - *zoom_factor) / remaining_ticks;
+                            debug!(" zoom_factor={:.2} step={:.3} ticks={:.1} time={:.3}", 
+                                *zoom_factor, zoom_factor_step, remaining_ticks, remaining_time);
+                            *zoom_factor = *zoom_factor + zoom_factor_step;
+                        }
+                        
+                        // Stop if zooming is ready
+                        if *zoom_factor <= 0.5 || *zoom_factor >= 2.0 || remaining_ticks <= 0.0 {
+                            *map_canvas.mode.borrow_mut() = MapCanvasMode::Void;
+                            *zoom_factor = 1.0;
+                            *map_canvas.zoom_sprite.borrow_mut() = None;
+                            map_win_r.update_map();
+                            return Continue(false);
+                        }
+
+                        // Request update
+                        map_win_r.update_map();
+                        Continue(true)
+                    });
+                
+                    // Request map update
+                    map_win.update_map();
+                    map_win.update_zoom_level_label(map_view.zoom_level);
                 }
-            
-                // Request map update
-                map_win.update_map();
-                map_win.update_zoom_level_label(map_win.map_view.borrow().zoom_level);
             }
         }
     }

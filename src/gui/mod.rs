@@ -25,6 +25,9 @@ pub mod mainwindow;
 pub use self::floatingtext::*;
 pub mod floatingtext;
 
+pub use self::sprite::*;
+pub mod sprite;
+
 /// Run main loop
 pub fn main() {
     // Start GTK main

@@ -81,6 +81,25 @@ impl Vector {
     pub fn cathetus(&self) -> f64 {
         (self.cathetus2() as f64).sqrt()
     }
+    
+    /// Convert vector to a f64 tuple.
+    pub fn as_tuple(&self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+
+    pub fn weighted_average(&self, other: Vector, weight: f64) -> Vector {
+        if weight == 0.0 {
+            *self
+        } else if weight == 1.0 {
+            other
+        } else {
+            Vector{
+                x: self.x * (1.0 - weight) + other.x * weight,
+                y: self.y * (1.0 - weight) + other.y * weight,
+            }
+        }
+    }
+
 }
 
 impl Sub for Vector {
@@ -281,15 +300,9 @@ impl Location {
         Err(format!("bad location: {}", lat_lon_str))
     }
 
-    pub fn weighted_average(&self, other: &Location, weight: f64) -> Location {
-        let r = self.weighted_average_(other, weight);
-        debug!("weighted_average: {} + {} -> {}", self, other, r);
-        r
-    }
-
     /// Create a weighted average copy. Value 0.5 results a mid-point between self and other.
     /// Value 0.0 results copy of self and value 1.0 copy of the other.
-    pub fn weighted_average_(&self, other: &Location, weight: f64) -> Location {
+    pub fn weighted_average(&self, other: &Location, weight: f64) -> Location {
         // TODO: bugs when the location are on different sides of 180°E/-180°W line
         if weight == 0.0 {
             self.clone()
