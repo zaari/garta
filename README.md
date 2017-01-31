@@ -1,12 +1,12 @@
 # Garta
 
-Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.gtk.org/) toolkit (used by e.g. [GNOME 3 desktop environment](https://www.gnome.org/gnome-3/)) and is written in Rust programming language. The application is at an early development stage still and won't be that useful before release [0.1.0](https://github.com/zaari/garta/milestone/1).
+Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.gtk.org/) toolkit (used by e.g. [GNOME 3 desktop environment](https://www.gnome.org/gnome-3/)) and is written in Rust programming language. The application will soon reach version [0.1.0](https://github.com/zaari/garta/milestone/1) which makes it possible to browse maps. GPX loading will be implemented in release 0.2.0 and saving in release 0.3.0.
 
 * [Road Map](RoadMap.md)
 * [Change Log](ChangeLog.md)
 
 ## Getting started
-The following tools are needed to download and compile the application:
+The application has the following dependencies at moment:
 
 * git 
 * cargo
@@ -26,7 +26,7 @@ If you want to get some debug from garta internals, you can configure the env_lo
 export RUST_LOG=warn,garta=info,garta::gui=debug
 ```
 
-The standard cargo commands can be used to run the unit tests, run the application in debug mode or even build a release. A release build performs noticeably better than a debug build.
+The standard cargo commands can be used to run the unit tests, run the application in debug mode or even build a release. A release build performs noticeably smoother than a debug build.
 
 ```bash
 cargo test

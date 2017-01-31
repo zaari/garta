@@ -285,7 +285,7 @@ impl MapCanvas {
         if let Some(ref widget) = self.widget {
             let vw = widget.get_allocated_width() as f64;
             let vh = widget.get_allocated_height() as f64;
-
+            
             // Default background color
             let background_color = (0.2f64, 0.2f64, 0.2f64);
         /* TODO: get_background_color is not available on API yet    
@@ -384,15 +384,19 @@ impl MapCanvas {
                         let ppdoe = ((tw as u64) << (zoom_level as u64)) as f64 / 360.0;
                         let global_nw_pos = projection.northwest_global_pixel(ppdoe);
                         let center_pos = projection.location_to_global_pixel_pos(center, ppdoe);
-                        let view_nw_pos = center_pos - Vector::new(vw / 2.0, vh / 2.0);
+                        let global_w = ((1i32 << zoom_level) as f64) * tw;
+                        let mut view_nw_pos = (center_pos - Vector::new(vw / 2.0, vh / 2.0));
+                        if view_nw_pos.x < -0.5 * global_w {
+                            view_nw_pos.x += global_w;
+                        }
                         let offset_pos = Vector::new(
                                 (view_nw_pos.x - global_nw_pos.x) % tw, 
                                 (view_nw_pos.y - global_nw_pos.y) % th);
-                        //debug!("{:?} - {:?} = {:?}", center_pos, Vector::new(vw / 2, vh / 2), view_nw_pos);
                         let grid_x = ((view_nw_pos.x - global_nw_pos.x) / tw) as i32;
                         let grid_y = ((view_nw_pos.y - global_nw_pos.y) / th) as i32;
                         let grid_w = ((vw + tw - 1.0) / tw + 1.0) as i32;
                         let grid_h = ((vh + th - 1.0) / th + 1.0) as i32;
+                        //debug!("grid=({},{}) view_nw_pos.x={:.0} center_pos.x={:.0} global_w={:.0}", grid_x, grid_y, view_nw_pos.x, center_pos.x, global_w);
 
                         // Create an ordered list of tile requests
                         let mut treqs: BTreeSet<TileRequest> = BTreeSet::new();
@@ -409,17 +413,30 @@ impl MapCanvas {
                                 // Add to the ordered set
                                 treqs.insert(TileRequest::new(gen, pri as i64,
                                     grid_x + lx as i32, 
-                                    grid_y + ly as i32, zoom_level, 
-                                    mult, tile_source.clone()));
+                                    grid_y + ly as i32, 
+                                    zoom_level, mult, tile_source.clone()));
                             }
                         }
 
                         // Use a separate image surface for tiles to avoid seams when not rounding
                         let mut tile_sprite_o = self.tile_sprite.borrow_mut();
+                        let tile_sprite_width = (grid_w as f64 * tw) as i32;
+                        let tile_sprite_height = (grid_h as f64 * th) as i32;
+                        if {
+                            if let Some(ref mut tile_sprite) = *tile_sprite_o {
+                                tile_sprite.width != tile_sprite_width ||
+                                tile_sprite.height != tile_sprite_height 
+                            } else {
+                                false
+                            }
+                        } {
+                            // Drop tile sprite if canvas size has changed significantly
+                            *tile_sprite_o = None;
+                        }
                         if tile_sprite_o.is_none() {
                             *tile_sprite_o = Some(Sprite::with_offset(
-                                                      (grid_w as f64 * tw) as i32, 
-                                                      (grid_h as f64 * th) as i32,
+                                                      tile_sprite_width, 
+                                                      tile_sprite_height,
                                                       offset_pos,
                                                       zoom_level, false));
                         }
@@ -845,7 +862,7 @@ impl MapCanvas {
                     }
                 }
                 
-                if *op != 0 {
+                if zoom_op != 0 {
                     // Let cache know that we changed the level.
                     {
                         let mut tcache = map_win.tile_cache.borrow_mut();
@@ -979,6 +996,31 @@ impl CoordinateContext {
     pub fn gpos_to_loc(&mut self, global_pos: Vector) -> Location {
         self.projection.global_pixel_pos_to_location(global_pos, self.ppdoe)
     }
+
+/*    
+    /// Returns tile position, offset (within tile) and tile width of the view.
+    pub fn tile_pos(&mut self, global_pos: Vector) -> (Vector, (i32, i32), (i32, i32)) {
+        let global_nw_pos = self.projection.northwest_global_pixel(self.ppdoe);            
+        let center_pos = self.projection.location_to_global_pixel_pos(self.center, self.ppdoe);
+        let view_nw_pos = center_pos - Vector::new(vw / 2.0, vh / 2.0);
+
+        let tw = self.tile_width;
+        let th = self.tile_height;
+
+        (Vector::new(
+            (view_nw_pos.x - global_nw_pos.x) % tw,
+            (view_nw_pos.y - global_nw_pos.y) % th,
+         ), 
+         (
+            ((view_nw_pos.x - global_nw_pos.x) / tw) as i32,
+            ((view_nw_pos.y - global_nw_pos.y) / th) as i32,
+         ), 
+         (
+            ((vw + tw - 1.0) / tw + 1.0) as i32,
+            ((vh + th - 1.0) / th + 1.0) as i32,
+         ))
+    }
+*/    
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ This is the development roadmap which is subject to change depending on the phas
 - view-related persistence 
 
 ## Version 0.2
+- Refactor MapCanvas::draw (modularity, maintainability, readability, simplicity)
 - GPX loading
 - track rendering and statistics
 - transparent map layers
