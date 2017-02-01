@@ -5,10 +5,12 @@ addons:
   apt:
     packages:
       gtk+3.0
+      build-essential
 rust:
+  - 1.15
 #  - stable
 #  - beta
-  - nightly
+#  - nightly
 #matrix:
 #  allow_failures:
 #    - rust: nightly
