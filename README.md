@@ -13,7 +13,7 @@ The application has the following dependencies at moment:
 * git 
 * cargo
 * rustc **v1.15**
-* gtk **v3.14** or newer
+* gtk **v3.16** or newer
 
 At first, you have to clone this repository.
 
