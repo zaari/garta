@@ -1,6 +1,8 @@
 # Garta
+[![Travis Build Status](https://travis-ci.org/zaari/garta.svg?branch=master)](https://travis-ci.org/zaari/garta)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
-Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.gtk.org/) toolkit (used by e.g. [GNOME 3 desktop environment](https://www.gnome.org/gnome-3/)) and is written in Rust programming language. The application will soon reach version [0.1.0](https://github.com/zaari/garta/milestone/1) which makes it possible to browse maps. GPX loading will be implemented in release 0.2.0 and saving in release 0.3.0.
+Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.gtk.org/) toolkit (used by e.g. [GNOME 3 desktop environment](https://www.gnome.org/gnome-3/)) and is written in Rust programming language. The application will soon reach version [0.1.0](https://github.com/zaari/garta/milestone/1) which allows you to explore tile-based world maps. GPX loading will be implemented for release [0.2.0](https://github.com/zaari/garta/milestone/2) and saving for release 0.3.0.
 
 * [Road Map](RoadMap.md)
 * [Change Log](ChangeLog.md)
@@ -10,8 +12,8 @@ The application has the following dependencies at moment:
 
 * git 
 * cargo
-* rustc **v1.15** (*nightly* channel until Feb 2017)
-* gtk v3.14 or newer
+* rustc **v1.15**
+* gtk **v3.14** or newer
 
 At first, you have to clone this repository.
 

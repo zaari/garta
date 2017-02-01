@@ -385,7 +385,7 @@ impl MapCanvas {
                         let global_nw_pos = projection.northwest_global_pixel(ppdoe);
                         let center_pos = projection.location_to_global_pixel_pos(center, ppdoe);
                         let global_w = ((1i32 << zoom_level) as f64) * tw;
-                        let mut view_nw_pos = (center_pos - Vector::new(vw / 2.0, vh / 2.0));
+                        let mut view_nw_pos = center_pos - Vector::new(vw / 2.0, vh / 2.0);
                         if view_nw_pos.x < -0.5 * global_w {
                             view_nw_pos.x += global_w;
                         }
@@ -396,7 +396,6 @@ impl MapCanvas {
                         let grid_y = ((view_nw_pos.y - global_nw_pos.y) / th) as i32;
                         let grid_w = ((vw + tw - 1.0) / tw + 1.0) as i32;
                         let grid_h = ((vh + th - 1.0) / th + 1.0) as i32;
-                        //debug!("grid=({},{}) view_nw_pos.x={:.0} center_pos.x={:.0} global_w={:.0}", grid_x, grid_y, view_nw_pos.x, center_pos.x, global_w);
 
                         // Create an ordered list of tile requests
                         let mut treqs: BTreeSet<TileRequest> = BTreeSet::new();
