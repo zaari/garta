@@ -1,4 +1,10 @@
 language: rust
+os:
+  - linux
+addons:
+  apt:
+    packages:
+      gtk+3.0
 rust:
 #  - stable
 #  - beta
@@ -6,3 +12,4 @@ rust:
 #matrix:
 #  allow_failures:
 #    - rust: nightly
+
