@@ -4,7 +4,7 @@ rust:
 #  - beta
   - nightly
 env:
-  - GTK=3.16
+  - GTK=3.18
 addons:
   apt:
     packages:
@@ -12,14 +12,14 @@ addons:
 #matrix:
 #  allow_failures:
 #    - rust: nightly
-#script:
-#  - BUNDLE="gtk-3.18.1-2"
-#  - FEATURES=gtk_3_18
-#  - WD="$PWD"
-#  - cd "$HOME"
-#  - curl -LO "https://github.com/gkoz/gtk-bootstrap/releases/download/$BUNDLE/deps.txz"
-#  - tar -xf deps.txz
-#  - cd "$WD"
-#  - export PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig"
-#  - cargo build --features "$FEATURES"
+script:
+  - BUNDLE="gtk-3.18.1-2"
+  - FEATURES=gtk_3_18
+  - WD="$PWD"
+  - cd "$HOME"
+  - curl -LO "https://github.com/gkoz/gtk-bootstrap/releases/download/$BUNDLE/deps.txz"
+  - tar -xf deps.txz
+  - cd "$WD"
+  - export PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig"
+  - cargo build --features "$FEATURES"
 
