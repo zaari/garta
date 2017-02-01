@@ -1,0 +1,17 @@
+# Ignore all scripts except build-loop.sh
+*.sh
+!build-loop.sh
+
+# Cargo lock file is not needed
+Cargo.lock
+
+# Roadmap is more readable than this messy file
+TODO.md
+
+# Ignore all maps except osm and mapbox ones
+maps/*
+!maps/osm-*.json
+!maps/mapbox-*.json
+
+# Build directory
+target/*
