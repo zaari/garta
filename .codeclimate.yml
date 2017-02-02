@@ -2,6 +2,6 @@ engines:
   fixme:
     enabled: true
 ratings:
-  paths: ["src"]
+  paths: ["src/**", "Crates.toml"]
 exclude_paths: []
 
