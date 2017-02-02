@@ -1,8 +1,5 @@
 # Garta 
 [![Travis Build Status](https://travis-ci.org/zaari/garta.svg?branch=master)](https://travis-ci.org/zaari/garta) 
-[![Code Climate](https://codeclimate.com/github/zaari/garta/badges/gpa.svg)](https://codeclimate.com/github/zaari/garta)
-[![Test Coverage](https://codeclimate.com/github/zaari/garta/badges/coverage.svg)](https://codeclimate.com/github/zaari/garta/coverage)
-[![Issue Count](https://codeclimate.com/github/zaari/garta/badges/issue_count.svg)](https://codeclimate.com/github/zaari/garta)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
 
