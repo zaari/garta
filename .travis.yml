@@ -9,6 +9,8 @@ addons:
   apt:
     packages:
       - libgtk-3-dev
+  code_climate:
+    repo_token: d88d5447f631e5887055f052bec1ad2dfdc8a9ecd3edf0cac11df0dece5aa8d8
 #matrix:
 #  allow_failures:
 #    - rust: nightly
