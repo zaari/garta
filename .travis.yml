@@ -12,7 +12,10 @@ addons:
       - libcurl4-openssl-dev
       - libelf-dev
       - libdw-dev
-
+      - binutils-dev
+      - cmake
+    sources:
+      - kalakris-cmake
 cache:
   apt: true
   directories:
@@ -43,4 +46,7 @@ script:
 after_success:
 # measure code coverage and upload to coveralls.io
   - cargo coveralls
+
+notifications:
+  email: false
 
