@@ -22,4 +22,5 @@ script:
   - cd "$WD"
   - export PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig"
   - cargo build --features "$FEATURES"
+  - cargo test --features "$FEATURES"
 

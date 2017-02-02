@@ -249,7 +249,7 @@ impl TileCache {
             self.tile_request_queue.write().unwrap().push_request(treq);
         }
         
-        // Approximate content
+        // Approximate content by scaling
         let mut tile = Tile::new_with_request(treq);
         if treq.z > 0 {
             let mut treq_up = treq.zoom_out();
@@ -825,24 +825,51 @@ impl Tile {
         self.surface.as_ref()
     }
 
-    /// Approximate a new tile by zooming this one in.
+    /// Scale and crop surface of this tile to meet the requirements of treq.
     fn zoom_in(&self, treq: &TileRequest) -> Tile {
         // Math
         let q2 = 1 << (treq.z - self.z) as i32;
         let offset_x = (-self.width * (treq.x as i32 % q2) / q2) as f64;
         let offset_y = (-self.height * (treq.y as i32 % q2) / q2) as f64;
 
-        // Create a new
+/*
+        // Temporary surface to get rid of scaling artifacts on the borders of the scaled tile.
+        // An alternative to this would be using a different antialiasing method on scaling
+        // but that's not supported by gtk-rs at moment.
+        let tsurface = ImageSurface::create(Format::Rgb24, self.width + 2, self.height + 2);
+        {
+            let c = cairo::Context::new(&tsurface);
+            let w = self.width;
+            let h = self.height;
+            if let Some(ref self_surface) = self.surface {
+                // Paint from source surface
+                for i in 0..2 {
+                    for j in 0..2 {
+                        c.set_source_surface(self_surface, i as f64, j as f64);
+                        c.paint();
+                    }
+                }
+            } else {
+                // Blue tile in case of missing surface (that shouldn't happen)
+                c.set_source_rgb(0.0, 0.0, 0.8);
+                c.paint();
+            }
+        }
+*/        
+
+        // Crop and scale self to a new surface
         let isurface = ImageSurface::create(Format::ARgb32, self.width, self.height);
         let c = cairo::Context::new(&isurface);
-        c.scale(q2 as f64, q2 as f64);
         if let Some(ref self_surface) = self.surface {
             // Paint from source surface
+            //c.translate(-1.0, -1.0);
+            c.scale(q2 as f64, q2 as f64);
             c.set_source_surface(self_surface, offset_x, offset_y);
+            //c.set_source_surface(&tsurface, offset_x, offset_y);
             c.paint();
             debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
         } else {
-            // Blue tile in case of missing surface
+            // Blue tile in case of missing surface (that shouldn't happen)
             c.set_source_rgb(0.0, 0.0, 0.8);
             c.paint();
         }
