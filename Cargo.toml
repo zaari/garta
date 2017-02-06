@@ -5,7 +5,7 @@ version = "0.0.8-dev"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [build-dependencies]
-serde_codegen = "0.8"
+serde_codegen = "0.9"
 
 [dependencies]
 image       = "0.12"
@@ -15,16 +15,16 @@ log         = "0.3"
 env_logger  = "0.4"
 
 lazy_static = "0.2"
-regex       = "0.1" # TODO: "0.2"
+regex       = "0.2"
 rand        = "0.3"
 num_cpus    = "1.2"
 xml-rs      = "0.3"
 assert      = "0.7"
 #gettext-rs  = "*"
 
-serde       = "0.8" # TODO: "0.9"
-serde_derive= "0.8"
-serde_json  = "0.8"
+serde       = "0.9"
+serde_derive= "0.9"
+serde_json  = "0.9"
 
 glib        = "^0.1.1"
 gdk         = "^0.5.1"

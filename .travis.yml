@@ -1,7 +1,7 @@
 language: rust
 rust:
-#  - stable
-#  - beta
+  - stable
+  - beta
   - nightly
 env:
   - GTK=3.18
@@ -11,14 +11,9 @@ addons:
       - libgtk-3-dev
 cache:
   apt: true
-  directories:
-    - target/debug/deps
-    - target/debug/build      
-#matrix:
-#  allow_failures:
-#    - rust: nightly
-
-
+matrix:
+  allow_failures:
+    - rust: nightly
 script:
   - BUNDLE="gtk-3.18.1-2"
   - FEATURES=gtk_3_18

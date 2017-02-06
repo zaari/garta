@@ -43,8 +43,14 @@ pub fn deserialize_all<P, T, F>(dir: P, handle_element: F) -> Result<(), io::Err
                     match stem_osstring.to_os_string().into_string() {
                         Ok(stem) => {
                             if filename.ends_with(".json") {
-                                let elem: T = deserialize_from(pathbuf)?;
-                                handle_element(elem, &stem);
+                                match deserialize_from(pathbuf) {
+                                    Ok(elem) => {
+                                        handle_element(elem, &stem);
+                                    },
+                                    Err(e) => {
+                                        return Err(io::Error::new(io::ErrorKind::Other, e));
+                                    }
+                                }
                             }
                         },
                         Err(e) => {
@@ -70,17 +76,9 @@ pub fn deserialize_from<T, P>(filename: P) -> Result<T, io::Error>
     match serde_json::from_reader(f) {
         Ok(element) => { Ok(element) },
         Err(e) => {
-            match e {
-                serde_json::error::Error::Syntax(error_code, a, b) => {
-                    Err(io::Error::new(io::ErrorKind::Other, format!("Syntax error in file {} (error code {})", 
-                        filename.as_ref().to_str().unwrap_or("???"), error_code)))
-                }
-                _ => {
-                    Err(io::Error::new(io::ErrorKind::Other, format!("Unknown error when deserializing an element from {}", 
-                        filename.as_ref().to_str().unwrap_or("???"))))
-                }
-            }
-        }
+            Err(io::Error::new(io::ErrorKind::Other, format!("Failed to deserialize {}: {}", 
+                filename.as_ref().to_str().unwrap_or("???"), e)))
+        }        
     }
 }
 
@@ -185,16 +183,15 @@ fn make_safe_name<S>(name: &S) -> String
 }
 
 /// Serializer for chrono::DateTime
-pub fn serialize_datetime<S>(dt: &DateTime<UTC>, f: &mut S) -> Result<(), S::Error> 
+pub fn serialize_datetime<S>(dt: &DateTime<UTC>, f: S) -> Result<S::Ok, S::Error> 
         where S: serde::Serializer,
 {
     let s = dt.to_rfc3339();
-    f.serialize_str(s.as_str())?;
-    Ok(())
+    f.serialize_str(s.as_str())
 }
 
 /// Deserializer for chrono::DateTime
-pub fn deserialize_datetime<D>(f: &mut D) -> Result<DateTime<UTC>, D::Error> 
+pub fn deserialize_datetime<D>(f: D) -> Result<DateTime<UTC>, D::Error> 
         where D: serde::Deserializer
 {
     let s: String = serde::Deserialize::deserialize(f)?;

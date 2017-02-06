@@ -291,10 +291,11 @@ impl Location {
             let caps = caps_wrapped.unwrap();
             let lat = caps.name("latdeg");
             let lon = caps.name("londeg");
-            let ns = { if caps.name("latside").expect("unexpected") == "N" { 1.0 } else { -1.0 }  };
-            let ew = { if caps.name("lonside").expect("unexpected") == "E" { 1.0 } else { -1.0 }  };
+            let ns = { if caps.name("latside").expect("unexpected").as_str() == "N" { 1.0 } else { -1.0 }  };
+            let ew = { if caps.name("lonside").expect("unexpected").as_str() == "E" { 1.0 } else { -1.0 }  };
             if lat.is_some() && lon.is_some() {
-                return Ok(Location::new(ns * lat.expect("unexpected").parse::<f64>().unwrap(), ew * lon.expect("unexpected").parse::<f64>().unwrap()));
+                return Ok(Location::new(ns * lat.expect("unexpected").as_str().parse::<f64>().unwrap(), 
+                                        ew * lon.expect("unexpected").as_str().parse::<f64>().unwrap()));
             } 
         }
         Err(format!("bad location: {}", lat_lon_str))
@@ -303,7 +304,7 @@ impl Location {
     /// Create a weighted average copy. Value 0.5 results a mid-point between self and other.
     /// Value 0.0 results copy of self and value 1.0 copy of the other.
     pub fn weighted_average(&self, other: &Location, weight: f64) -> Location {
-        // TODO: bugs when the location are on different sides of 180°E/-180°W line
+        // TODO: bugs when the locations are on different sides of 180th meridian
         if weight == 0.0 {
             self.clone()
         } else if weight == 1.0 {
@@ -930,6 +931,34 @@ mod tests {
         let gotska_sandon = Location::new_with_elevation(58.366667, 19.25, h);
         let s = gotska_sandon.distance_to_horizon();
         assert::close( s.unwrap(), 3.57 * sqrt(h) * 1000.0, 10.0 );
+    }
+
+    #[test]
+    fn test_location_weighted_average() {
+        let loc1 = Location::new_with_str("0°N 179°E").unwrap();
+        let loc2 = Location::new_with_str("0°N 179°W").unwrap();
+        
+        // West-side average
+        let loc12a = loc1.weighted_average(&loc2, 0.25);
+        assert_eq!(loc12a.lon, 179.5);
+        
+        // Midpoint
+        let loc12b = loc1.weighted_average(&loc2, 0.5);
+        assert::close(loc1.distance_to(&loc12b), loc12b.distance_to(&loc2), 0.000001);
+        assert!(loc12b.lon.abs() == 180.0);
+        
+        // East-side average
+        let loc12c = loc1.weighted_average(&loc2, 0.75);
+        assert_eq!(loc12c.lon, -179.5);
+
+        // Check that the points are eventually distributed
+        let dist1 = loc1.distance_to(&loc12a);
+        let dist2 = loc12a.distance_to(&loc12b);
+        let dist3 = loc12b.distance_to(&loc12c);
+        let dist4 = loc12c.distance_to(&loc2);
+        assert::close(dist1, dist2, 0.001);
+        assert::close(dist2, dist3, 0.001);
+        assert::close(dist3, dist4, 0.001);
     }
 
     #[test]
