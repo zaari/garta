@@ -5,7 +5,7 @@
 # Cargo lock file is not needed
 Cargo.lock
 
-# Roadmap is more readable than this messy file
+# Personal task list file
 TODO.md
 
 # Ignore all maps except osm and mapbox ones

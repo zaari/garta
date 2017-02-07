@@ -1608,11 +1608,18 @@ pub struct TileSource {
     /// User agent header field to be used in HTTP requests. None results a default.
     pub user_agent: Option<String>,
 
+    /// Referer header field to be used in HTTP requests. None results a default.
+    pub referer: Option<String>,
+
+    /// Override the server expire value with the given one. The value is in days.
+    pub expire_override: Option<u16>,
+
     /// Tile width which has to be known
     pub tile_width: i32,
     
     /// Tile height which has to be known
     pub tile_height: i32,
+
 }
 
 impl TileSource {
@@ -1622,6 +1629,8 @@ impl TileSource {
             urls: urls,
             token: token,
             user_agent: None,
+            referer: None,
+            expire_override: None,
             tile_width: tile_width,
             tile_height: tile_height,
         }
@@ -1651,10 +1660,17 @@ impl TileSource {
             } else {
                 // Add request headers
                 let mut headers = header::Headers::new();
+                
+                // User-Agent
                 if let Some(user_agent) = treq.source.user_agent.clone() {
                     headers.set(header::UserAgent(user_agent));
                 } else {
                     headers.set(header::UserAgent(settings_read().user_agent_header()));
+                }
+                
+                // Referer
+                if let Some(referer) = treq.source.referer.clone() {
+                    headers.set(header::Referer(referer));
                 }
             
                 // Request tile data from a remote server with GET
@@ -1677,9 +1693,15 @@ impl TileSource {
                                         expires = Some(UTC::now() + Duration::days(DEFAULT_TILE_EXPIRE_DAYS));
                                         debug!("Expires header missing, using a default");
                                     }
+
+                                    // Consider expire override
+                                    if let Some(expire_override) = treq.source.expire_override {
+                                        expires = Some(UTC::now() + Duration::days(expire_override as i64));
+                                    }
+                                    
                                 },
                                 Err(e) => {
-                                    error!("Failed to read tile from a remote server; {}", e);
+                                    warn!("Failed to read tile from a remote server; {}", e);
                                     return TileRequestResult::with_code(treq, TileRequestResultCode::TransmissionError);
                                 }
                             }
@@ -1698,7 +1720,7 @@ impl TileSource {
                         }
                     },
                     Err(e) => {
-                        error!("Failed to get tile from a remote server; {}", e);
+                        warn!("Failed to get tile from a remote server; {}", e);
                         return TileRequestResult::with_code(treq, 
                             TileRequestResultCode::TransmissionError);
                     },

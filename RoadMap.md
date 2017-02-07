@@ -34,7 +34,7 @@ This is the development roadmap which is subject to change depending on the phas
 
 ## Version 0.6
 - maps dialog
-- 2x tile support
+- HiDPI tile support
 
 ## Version 0.7
 - vehicles and modes

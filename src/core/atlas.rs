@@ -233,36 +233,55 @@ impl Eq for Layer {}
 /// Slippy map parameters.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Map {
+    /// Unique identifier of the map
     #[serde(default)]
     pub slug: String,
     
+    /// Map name for UI
     #[serde(default)]
     pub name: String,
     
+    /// Tile width
     #[serde(default)]
     pub tile_width: Option<i32>,
     
+    /// Tile height
     #[serde(default)]
     pub tile_height: Option<i32>,
-    
+
+    /// Maximum zoom level provided by the map
     #[serde(default = "default_max_zoom_level")]
     pub max_zoom_level: u8,
     
+    /// True if the map is to be used as an overlay
     #[serde(default)]
     pub transparent: bool,
 
+    /// The map colors are dark that should be taken into account when choosing text and symbol colors.
     #[serde(default)]
     pub dark: bool,
+    
+    /// Override server define tile expiration. The value defines number of days.
+    #[serde(default)]
+    pub expire_override: Option<u16>,
 
+    /// Tile urls
     #[serde(default)]
     pub urls: Vec<String>,
-    
+
+    /// Token to be substituded in url. Either a reference to tokens or a literal token.    
     #[serde(default)]
     pub token: String,
-    
+
+    /// HTTP User-Agent header field value
     #[serde(default)]
     pub user_agent: Option<String>,
     
+    /// HTTP Referer header field value
+    #[serde(default)]
+    pub referer: Option<String>,
+
+    /// Copyright texts
     #[serde(default)]
     pub copyrights: Vec<MapCopyright>,
 }
@@ -278,9 +297,11 @@ impl Map {
             max_zoom_level: default_max_zoom_level(),
             transparent: false,
             dark: false,
+            expire_override: None,
             urls: Vec::new(),
             token: "".into(),
             user_agent: None,
+            referer: None,
             copyrights: Vec::new(),
         }
     }
@@ -304,6 +325,8 @@ impl Map {
                 urls: self.urls.clone(),
                 token: token,
                 user_agent: self.user_agent.clone(),
+                referer: self.referer.clone(),
+                expire_override: self.expire_override.clone(),
                 tile_width: self.tile_width.unwrap(),
                 tile_height: self.tile_height.unwrap(),
             })

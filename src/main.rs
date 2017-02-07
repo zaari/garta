@@ -60,7 +60,7 @@ fn main() {
     
     // Load maps from JSON files
     info!("Loading map files");
-    for dir_name in vec![settings_read().host_maps_directory(), settings_read().user_maps_directory()] {
+    for dir_name in settings_read().map_directories() {
         match deserialize_all(dir_name, |map: Map, file_stem: &String| {
             debug!("Loaded map {} ({})", map.name, file_stem);
             atlas.borrow_mut().maps.insert(map.slug.clone(), map);
@@ -71,7 +71,7 @@ fn main() {
     }
     
     // Load tokens
-    for dir_name in vec![settings_read().host_tokens_directory(), settings_read().user_tokens_directory()] {
+    for dir_name in settings_read().token_directories() {
         match deserialize_all(dir_name, |token: MapToken, file_stem: &String| {
             debug!("Loaded token {}", file_stem);
             atlas.borrow_mut().tokens.insert(file_stem.clone(), token);

@@ -8,10 +8,11 @@ Garta is going to be a GPX viewer, analyzer and editor for [GTK+ 3](http://www.g
 * [Change Log](ChangeLog.md)
 
 ## Getting started
-The application has the following minimum dependencies at moment:
+The application has the following minimum requirements at moment:
 
 * git 
-* rust **1.15** (rustc and cargo)
+* rustc **1.15**
+* cargo **0.16**
 * gtk **3.16**
 
 At first, you have to clone this repository.

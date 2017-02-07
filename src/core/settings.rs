@@ -116,7 +116,7 @@ impl Settings {
             http_proxy_host: None,
             http_proxy_port: None,
             tile_mem_cache_capacity: Some(256 * 1024 * 1024),
-            tile_disk_cache_capacity: Some(100 * 1024 * 1024),
+            tile_disk_cache_capacity: Some(1000 * 1024 * 1024),
             main_window_geometry: "".to_string(),
             browser_command: "xdg-open".into(),
         }
@@ -128,13 +128,29 @@ impl Settings {
     }
 
     /// Get ui files directory
-    pub fn ui_directory(&self) -> path::PathBuf { 
-        let mut pb = string_to_path(&self.host_data_directory); pb.push("ui"); pb 
+    pub fn ui_directory_for(&self, filename: &'static str) -> path::PathBuf { 
+        let mut pb = string_to_path(&self.host_data_directory); 
+        pb.push("ui"); // TODO: test if a ui directory exists at current working directory
+        pb.push(filename);
+        pb 
+    }
+
+    /// Return a list of directories where to try load map json files.    
+    pub fn map_directories(&self) -> Vec<path::PathBuf> {
+        vec![
+            { let mut pb = string_to_path(&self.host_data_directory); pb.push("maps"); pb  },
+            { self.user_maps_directory() },
+            { let mut pb = path::PathBuf::from("."); pb.push("maps"); pb },
+        ]
     }
     
-    /// Get host-wide maps directory
-    pub fn host_maps_directory(&self) -> path::PathBuf { 
-        let mut pb = string_to_path(&self.host_data_directory); pb.push("maps"); pb 
+    /// Return a list of directories where to try load token json files.    
+    pub fn token_directories(&self) -> Vec<path::PathBuf> {
+        vec![
+            { let mut pb = string_to_path(&self.host_data_directory); pb.push("maps"); pb.push("tokens"); pb  },
+            { self.user_tokens_directory() },
+            { let mut pb = path::PathBuf::from("."); pb.push("maps"); pb.push("tokens"); pb },
+        ]
     }
     
     /// Get user's maps directory
@@ -142,14 +158,9 @@ impl Settings {
         let mut pb = string_to_path(&self.config_directory); pb.push("maps"); pb 
     }
 
-    /// Get host-wide tokens directory
-    pub fn host_tokens_directory(&self) -> path::PathBuf { 
-        let mut pb = string_to_path(&self.host_data_directory); pb.push("tokens"); pb 
-    }
-    
     /// Get user's tokens directory
     pub fn user_tokens_directory(&self) -> path::PathBuf { 
-        let mut pb = string_to_path(&self.config_directory); pb.push("tokens"); pb 
+        let mut pb = string_to_path(&self.config_directory); pb.push("maps"); pb.push("tokens"); pb 
     }
     
     /// Get settings filename
@@ -265,7 +276,7 @@ impl Settings {
     
     /// Save settings to a file. Returns Err if saving the file failed.
     pub fn save(&self) -> Result<(), &'static str> {
-        Ok(()) // TODO
+        Ok(()) // TODO: save settings to file
     }
 }
 

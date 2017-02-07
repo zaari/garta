@@ -28,6 +28,7 @@ use geocoord::geo::{Location};
 use core::atlas::{Atlas, MapView};
 use core::id::{UniqueId};
 use core::tiles::{TileCache, TileObserver, TileRequest};
+use core::settings::{settings_read};
 use gui::mapcanvas::{MapCanvas};
 //use core::settings::{settings_read, settings_write};
 
@@ -104,7 +105,7 @@ impl MapWindow {
             let mut widgets = self.widgets.borrow_mut();
 
             // Load resources from a glade file
-            let builder = gtk::Builder::new_from_file("ui/main-window.ui");
+            let builder = gtk::Builder::new_from_file(settings_read().ui_directory_for("main-window.ui"));
             let win_o: Option<gtk::ApplicationWindow> = builder.get_object("main_window");
             if let Some(ref win) = win_o {
                 // Action for add_attraction
