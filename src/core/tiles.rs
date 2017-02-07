@@ -1465,7 +1465,7 @@ impl TileRequestQueue {
 
                     // Start processing the request
                     if let Some(treq) = treq_o {
-                        debug!("treq={:?} trq={:?}", treq, trqueue_t.read());
+                        debug!("treq={:?} trq={:?}", treq, *trqueue_t.read().unwrap());
                     
                         // Load tile from tile cache
                         let mut download_needed = treq.tile_fetch_mode != TileFetchMode::Cache;
