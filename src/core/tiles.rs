@@ -276,7 +276,7 @@ impl TileCache {
 
                 // Enqueue a new request to prepare for similar cases
                 if treq.z > 0 {
-                    // Request precautionary tiles three levels higher
+                    // Request precautionary tiles some levels higher
                     self.queue_precautionary_request(&treq, -3,  0,  0, 1);
                     self.queue_precautionary_request(&treq, -3,  1,  0, 1);
                     self.queue_precautionary_request(&treq, -3, -1,  0, 1);
@@ -440,17 +440,19 @@ impl TileCache {
                 treq_result.to_key());
         }
         
-        // Flush mem and disk caches if needed.
-        if self.inserts_since_flush_check > 100 { // TODO: non-hardcoded
-            self.check_cache();
-            self.inserts_since_flush_check = 0;
-        }
-
         return true;
     }
 
     /// Flush caches if their memory usage is too high.
-    fn check_cache(&mut self) {
+    pub fn check_cache(&mut self, force: bool) {
+        // Run the check only if there are enough inserts
+        if self.inserts_since_flush_check < 100 && !force { // TODO: non-hardcoded limit
+            return;
+        } else {
+            self.inserts_since_flush_check = 0;
+            debug!("Flushing tile cache...");
+        }
+    
         // Create a vector ordered by access time and count mem usage
         let mut tord: Vec<TileOrd> = Vec::with_capacity(self.tiles.len());
         let mut mem_usage = 0;
@@ -831,43 +833,99 @@ impl Tile {
         let q2 = 1 << (treq.z - self.z) as i32;
         let offset_x = (-self.width * (treq.x as i32 % q2) / q2) as f64;
         let offset_y = (-self.height * (treq.y as i32 % q2) / q2) as f64;
-
-/*
-        // Temporary surface to get rid of scaling artifacts on the borders of the scaled tile.
-        // An alternative to this would be using a different antialiasing method on scaling
-        // but that's not supported by gtk-rs at moment.
-        let tsurface = ImageSurface::create(Format::Rgb24, self.width + 2, self.height + 2);
-        {
-            let c = cairo::Context::new(&tsurface);
-            let w = self.width;
-            let h = self.height;
-            if let Some(ref self_surface) = self.surface {
-                // Paint from source surface
-                for i in 0..2 {
-                    for j in 0..2 {
-                        c.set_source_surface(self_surface, i as f64, j as f64);
-                        c.paint();
-                    }
-                }
-            } else {
-                // Blue tile in case of missing surface (that shouldn't happen)
-                c.set_source_rgb(0.0, 0.0, 0.8);
-                c.paint();
-            }
-        }
-*/        
+        let q2f = q2 as f64;
+        let q2m = q2 >> 1;
+        let q2mf = q2m as f64;
 
         // Crop and scale self to a new surface
         let isurface = ImageSurface::create(Format::ARgb32, self.width, self.height);
         let c = cairo::Context::new(&isurface);
         if let Some(ref self_surface) = self.surface {
             // Paint from source surface
-            //c.translate(-1.0, -1.0);
-            c.scale(q2 as f64, q2 as f64);
-            c.set_source_surface(self_surface, offset_x, offset_y);
-            //c.set_source_surface(&tsurface, offset_x, offset_y);
-            c.paint();
-            debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
+            if true {
+                // This is a mediocre workaround to get rid of scaling artifacts at edges.
+                // There are couple ways to fix this but none of them is supported by
+                // gtk-rs binding at moment:
+                //  1) convert tile to Pixbuf and scale it with InterpType::NEAREST
+                //  2) set SurfacePattern as source
+                //  3) something even smarter
+                let tsurface = ImageSurface::create(Format::Rgb24, self.width + q2m * 2, self.height + q2m * 2);
+                {
+                    let c = cairo::Context::new(&tsurface);
+                    let w = self.width;
+                    let h = self.height;
+                    if let Some(ref self_surface) = self.surface {
+                        // Background with medium gray for the corners
+                        c.set_source_rgb(0.5, 0.5, 0.5);
+                        c.paint();
+                        
+                        // Copy the tile to the sides of the "frame"
+                        for (x, y, w, h, xp, yp) in vec![
+                            // west edge
+                            (0.0, q2mf, 
+                             q2mf, self.height as f64, 
+                             0.0, q2mf), 
+                             
+                            // east edge
+                            (q2mf + self.width as f64, q2mf, 
+                             q2mf, self.height as f64, 
+                             q2mf * 2.0, q2mf), 
+                             
+                            // north edge
+                            (q2mf, 0.0, 
+                             self.width as f64, q2mf, 
+                             q2mf, 0.0), 
+                             
+                            // south edge
+                            (q2mf, q2mf + self.height as f64, 
+                             self.width as f64, q2mf, 
+                             q2mf, q2mf * 2.0), 
+                        ] {
+                            c.rectangle(x, y, w, h);
+                            c.clip();
+                            c.set_source_surface(self_surface, xp, yp);
+                            c.paint();
+                            c.reset_clip();
+                        }
+                    
+/*                    
+                        // Purple to west and north
+                        c.set_source_rgb(1.0, 0.0, 1.0);
+                        c.paint();
+                        
+                        // Cyan to east and south
+                        let se = (self.width + q2m * 2) as f64;
+                        c.move_to(se, 0.0);
+                        c.line_to(se, se);
+                        c.line_to(0.0, se);
+                        c.close_path();
+                        c.set_source_rgb(0.0, 1.0, 1.0);
+                        c.fill();
+*/                        
+                        
+                        // Copy tile to the center of the surface
+                        c.set_source_surface(self_surface, q2mf, q2mf);
+                        c.paint();
+                    } else {
+                        // Blue tile in case of missing surface (that shouldn't happen)
+                        c.set_source_rgb(0.0, 0.0, 0.8);
+                        c.paint();
+                    }
+                }
+            
+                // Complicated scaling resulting no noticeable seams
+                c.scale(q2f, q2f);
+                c.translate(-q2mf, -q2mf);
+                c.set_source_surface(&tsurface, offset_x, offset_y);
+                c.paint();
+                debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
+            } else {
+                // Simple scaling resulting unwanted seams
+                c.scale(q2f, q2f);
+                c.set_source_surface(self_surface, offset_x, offset_y);
+                c.paint();
+                debug!("zoom_in: q2={} offset={},{}", q2, offset_x, offset_y);
+            }
         } else {
             // Blue tile in case of missing surface (that shouldn't happen)
             c.set_source_rgb(0.0, 0.0, 0.8);

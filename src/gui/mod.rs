@@ -19,6 +19,9 @@ extern crate gtk;
 pub use self::mapcanvas::*;
 pub mod mapcanvas;
 
+pub use self::cursormode::*;
+pub mod cursormode;
+
 pub use self::mainwindow::*;
 pub mod mainwindow;
 

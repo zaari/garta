@@ -1,7 +1,7 @@
 [package]
 name = "garta"
 description = "Garta is going to be a GPX viewer, analyzer and editor for GTK3"
-version = "0.0.8-dev"
+version = "0.1.0"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
 
 [build-dependencies]
@@ -28,6 +28,7 @@ serde_json  = "0.9"
 
 glib        = "^0.1.1"
 gdk         = "^0.5.1"
+gdk-sys     = "^0.3.2"
 gdk-pixbuf  = "^0.1.1"
 gtk         = "^0.1.1"
 gio         = "^0.1.1"

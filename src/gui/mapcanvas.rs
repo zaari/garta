@@ -17,6 +17,7 @@
 extern crate gtk;
 extern crate gio;
 extern crate gdk;
+extern crate gdk_sys;
 extern crate glib;
 extern crate cairo;
 extern crate chrono;
@@ -35,6 +36,7 @@ use core::tiles::*;
 use geocoord::geo::{Vector, Location, Projection};
 use gui::floatingtext::*;
 use gui::sprite::{Sprite};
+use gui::cursormode::{CursorMode, CursorKeeper};
 use core::settings::{settings_read};
 
 // Animation frames per second
@@ -79,6 +81,9 @@ pub enum MapCanvasMode {
 pub struct MapCanvas {
     /// GKT drawing area widget for the canvas.
     pub widget: Option<gtk::DrawingArea>,
+    
+    /// Cursor mode of the canvas.
+    pub cursor_keeper: RefCell<CursorKeeper>,
     
     // Floating text elements at southeast corner from bottom to up. 
     // The pivot points are relative to southeast corner of the window and 
@@ -140,6 +145,7 @@ impl MapCanvas {
     pub fn new() -> MapCanvas {
         MapCanvas {
             widget: None,
+            cursor_keeper: RefCell::new(CursorKeeper::new()),
             float_texts_se: RefCell::new(Vec::new()),
             map_win: None,
             mode: RefCell::new(MapCanvasMode::Void),
@@ -182,7 +188,7 @@ impl MapCanvas {
                       | (1 << 10) // gdk::EventMask::KEY_PRESS_MASK
                       | (1 << 11) // gdk::EventMask::KEY_RELEASE_MASK
         );
-
+        
         // Signal handlers
         let mwin = map_win.clone();
         canvas.connect_draw( move |widget, context| { 
@@ -591,6 +597,9 @@ impl MapCanvas {
             }
             *self.mode.borrow_mut() = new_mode;
         }
+        
+        // Cursor shape update if needed
+        self.update_cursor_mode();
     }
 
     /// Event handler for mouse button release. Either stop drag or scroll, or select a new 
@@ -674,6 +683,7 @@ impl MapCanvas {
                                 if speed_vec_step.cathetus2() < 0.1 {
                                     *map_canvas.mode.borrow_mut() = MapCanvasMode::Void;
                                     map_win_r.update_map();
+                                    map_win_r.tile_cache.borrow_mut().check_cache(false);
                                     return Continue(false);
                                 }
 
@@ -722,6 +732,9 @@ impl MapCanvas {
         } else {
             *self.mode.borrow_mut() = MapCanvasMode::Void;
         }
+
+        // Cursor shape update if needed
+        self.update_cursor_mode();
     }
 
     /// Event handler for mouse motion. Either drag or scroll.
@@ -788,6 +801,9 @@ impl MapCanvas {
                 map_win.update_map();
             }
         }
+
+        // Cursor shape update if needed
+        self.update_cursor_mode();
     }
 
     /// Event handler for mouse wheel.
@@ -928,7 +944,31 @@ impl MapCanvas {
                     map_win.update_zoom_level_label(map_view.zoom_level);
                 }
             }
+
+            // Flush tile cache if needed
+            let map_canvas = map_win.map_canvas.borrow();
+            if *map_canvas.mode.borrow() == MapCanvasMode::Void {
+                map_win.tile_cache.borrow_mut().check_cache(false);
+            }
         }
+
+        // Cursor shape update if needed
+        self.update_cursor_mode();
+    }
+    
+    /// Changes cursor shape based on canvas mode if needed.
+    fn update_cursor_mode(&self) {
+        if let Some(ref canvas) = self.widget {
+            let cursor_mode = match *self.mode.borrow() {
+                MapCanvasMode::Void            => { CursorMode::Draggable }
+                MapCanvasMode::Moving          => { CursorMode::Dragging }
+                MapCanvasMode::Scrolling       => { CursorMode::Dragging }
+                MapCanvasMode::ScrollAnimation => { CursorMode::Draggable }
+                MapCanvasMode::ZoomAnimation   => { CursorMode::Draggable }
+            };
+            self.cursor_keeper.borrow_mut().change_for(cursor_mode, canvas.get_window());
+        }
+    
     }
 }
 

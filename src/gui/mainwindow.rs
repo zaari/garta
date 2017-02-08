@@ -192,6 +192,12 @@ impl MapWindow {
             widgets.layers_button = Some(builder.get_object("layers_button").unwrap());
             widgets.layers_button_label = Some(builder.get_object("layers_button_label").unwrap());
             widgets.coordinates_button = Some(builder.get_object("coordinates_button").unwrap());
+            
+            // Hide unfinished items
+            { let b: gtk::MenuButton = builder.get_object("add_button").unwrap(); b.set_visible(false); }
+            { let b: gtk::MenuButton = builder.get_object("list_button").unwrap(); b.set_visible(false); }
+            { let b: gtk::MenuButton = builder.get_object("menu_button").unwrap(); b.set_visible(false); }
+            { let b: gtk::Widget = builder.get_object("layers_button").unwrap(); b.set_visible(false); }
         }
         
         // Populate popovers and override default values
@@ -204,7 +210,7 @@ impl MapWindow {
         self.update_coordinates_button(None, None);
         self.update_zoom_level_label(zoom_level);
         self.update_map();
-        
+
         Ok(())
     }
 

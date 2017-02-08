@@ -1,14 +1,6 @@
 # Garta Roadmap
 This is the development roadmap which is subject to change depending on the phase of moon, weather, mood, etc. See the [change log](ChangeLog.md) for more information about the current state. The items needed for the upcoming build are copied to Github [Issue](https://github.com/zaari/garta/issues) and [Milestone](https://github.com/zaari/garta/milestones) tracker.
 
-## Version 0.1
-- status bar of the main window has maps, layers, coordinates and zoom level widgets completed
-- slippy maps can be defined in json files
-- tile cache
-- map implemented with scrolling and zooming support (with smooth zooming and scrolling inertia)
-- maps have the required copyright information and the related clickable urls visible
-- view-related persistence 
-
 ## Version 0.2
 - Refactor MapCanvas::draw (modularity, maintainability, readability, simplicity)
 - GPX loading

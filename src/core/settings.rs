@@ -116,7 +116,7 @@ impl Settings {
             http_proxy_host: None,
             http_proxy_port: None,
             tile_mem_cache_capacity: Some(256 * 1024 * 1024),
-            tile_disk_cache_capacity: Some(1000 * 1024 * 1024),
+            tile_disk_cache_capacity: Some(100 * 1024 * 1024),
             main_window_geometry: "".to_string(),
             browser_command: "xdg-open".into(),
         }
@@ -238,13 +238,7 @@ impl Settings {
     
     /// Return HTTP User Agent header to be used.
     pub fn user_agent_header(&self) -> String {
-        // TODO: this can be simplified after reaching version 0.1.0
-        if APP_VERSION_MAJOR == "0" && APP_VERSION_MINOR == "0" {
-            format!("{}/{} (+https://github.com/zaari/garta)", APP_NAME, APP_VERSION)
-        } else {
-            format!("{}/{}.{} (+https://github.com/zaari/garta)", 
-                APP_NAME, APP_VERSION_MAJOR, APP_VERSION_MINOR)
-        }
+        format!("{}/{} (+https://github.com/zaari/garta)", APP_NAME, APP_VERSION)
     }
     
     /// Load settings from a file. Returns Ok if either the loading succeeded or 
