@@ -21,4 +21,7 @@ pub mod elements;
 pub mod persistence;
 pub mod misc;
 pub mod id;
+pub mod vehicle;
+pub mod units;
+pub mod color;
 

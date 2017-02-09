@@ -26,6 +26,7 @@ use std::env;
 use std::path;
 use self::hyper::client::{Client};
 use self::regex::{Regex};
+use core::units::{Units};
 
 /// Default number of days until tiles expire if the server doesn't send expiration information.
 pub static DEFAULT_TILE_EXPIRE_DAYS: i64 = 7;
@@ -54,6 +55,9 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
+    /// The default units of the app. If vehicle has units defined those override this setting.
+    pub units: Units,
+
     // Per host data directory for the atlas
     host_data_directory: String,
     
@@ -104,6 +108,7 @@ impl Settings {
     /// Private constructor
     fn new() -> Settings {
         Settings {
+            units: Units::Nautical,
             host_data_directory: ".".to_string(), // TODO: "/usr/local/share/garta".to_string(),
             user_data_directory: "~/.local/share/garta".to_string(),
             config_directory: "~/.config/garta".to_string(),
