@@ -888,21 +888,6 @@ impl Tile {
                             c.reset_clip();
                         }
                     
-/*                    
-                        // Purple to west and north
-                        c.set_source_rgb(1.0, 0.0, 1.0);
-                        c.paint();
-                        
-                        // Cyan to east and south
-                        let se = (self.width + q2m * 2) as f64;
-                        c.move_to(se, 0.0);
-                        c.line_to(se, se);
-                        c.line_to(0.0, se);
-                        c.close_path();
-                        c.set_source_rgb(0.0, 1.0, 1.0);
-                        c.fill();
-*/                        
-                        
                         // Copy tile to the center of the surface
                         c.set_source_surface(self_surface, q2mf, q2mf);
                         c.paint();
