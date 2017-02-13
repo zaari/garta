@@ -30,7 +30,7 @@ use std::collections::{BTreeSet, VecDeque};
 use std::process;
 use self::gtk::prelude::*;
 
-use super::mainwindow::{MapWindow};
+use gui::mapwindow::{MapWindow};
 use self::chrono::{UTC};
 use core::tiles::*;
 use geocoord::geo::{Vector, Location, Projection};

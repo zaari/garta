@@ -53,6 +53,7 @@ pub struct MapWindow {
 /// As gtk-rs elements are just wrappers pointing the native widgets they survive from cloning.
 #[derive(Clone)]
 struct MapWindowWidgets {
+    app:                    Option<gtk::Application>,
     win:                    Option<gtk::ApplicationWindow>,
     coordinates_label:      Option<gtk::Label>,
     zoom_level_label:       Option<gtk::Label>,
@@ -66,6 +67,7 @@ struct MapWindowWidgets {
 impl MapWindowWidgets {
     fn new() -> MapWindowWidgets {
         MapWindowWidgets {
+            app: None,
             win: None,
             coordinates_label: None,
             zoom_level_label: None,
@@ -88,14 +90,9 @@ impl MapWindow {
             widgets: RefCell::new(MapWindowWidgets::new()),
         })
     }
-    
-    /// Build main window and run GTK main.
-    pub fn init(&self, self_rc: Rc<Self>) -> Result<(), &'static str> {
-        // Initialize GTK
-        if gtk::init().is_err() {
-            return Err("Failed to initialize GTK.");
-        }
 
+    /// Called by Application::activate signal.
+    pub fn init(&self, self_rc: Rc<Self>, app: &gtk::Application) -> Result<(), &'static str> {
         // Initialize map canvas        
         self.map_canvas.borrow_mut().init(self_rc.clone());
 
@@ -103,11 +100,18 @@ impl MapWindow {
         {    
             // Get widgets struct
             let mut widgets = self.widgets.borrow_mut();
-
+            
             // Load resources from a glade file
             let builder = gtk::Builder::new_from_file(settings_read().ui_directory_for("main-window.ui"));
             let win_o: Option<gtk::ApplicationWindow> = builder.get_object("main_window");
             if let Some(ref win) = win_o {
+                // Set application to this window
+                win.set_application(Some(&app));
+                widgets.app = Some(app.clone());
+                
+                // Define window role for Window Manager
+                win.set_role("mapwin");
+                
                 // Action for add_attraction
                 let add_attraction_action = gio::SimpleAction::new("add_attraction", None);
                 add_attraction_action.connect_activate(|_, _| {
@@ -155,7 +159,6 @@ impl MapWindow {
                         }
                     
                         // Quit GTK
-                        gtk::main_quit();
                         gtk::Inhibit(false)
                     });
                 }

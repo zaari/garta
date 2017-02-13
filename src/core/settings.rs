@@ -37,6 +37,9 @@ static MIN_WORKER_THREADS: i32 = 2;
 /// Maximum number of worker threads in case of auto detection.
 static MAX_WORKER_THREADS: i32 = 8;
 
+/// GTK application id https://developer.gnome.org/gio/unstable/GApplication.html#g-application-id-is-valid
+pub static APP_ID: &'static str = "com.github.zaari.garta";
+
 /// Application name
 pub static APP_NAME: &'static str = "Garta";
 
@@ -121,7 +124,7 @@ impl Settings {
             http_proxy_host: None,
             http_proxy_port: None,
             tile_mem_cache_capacity: Some(256 * 1024 * 1024),
-            tile_disk_cache_capacity: Some(100 * 1024 * 1024),
+            tile_disk_cache_capacity: Some(1000 * 1024 * 1024),
             main_window_geometry: "".to_string(),
             browser_command: "xdg-open".into(),
         }

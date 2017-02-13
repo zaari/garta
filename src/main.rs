@@ -100,20 +100,16 @@ fn main() {
 
     // Open GUI
     info!("Showing the main window");
-    let main_window_r = gui::MapWindow::new_rc(atlas, map_view, tcache_rrc.clone());
-    match main_window_r.init(main_window_r.clone()) {
-        Ok(()) => { },
-        Err(e) => { error!("Failed to open the main window: {}", e); exit(1); },
+    match gui::run_app(atlas, map_view, tcache_rrc.clone()) {
+        Ok(map_win) => {
+            // Save map view
+            map_win.map_view.borrow().store();
+        },
+        Err(e) => {
+            error!("Failed to run the app: {}", e);
+        }
     }
-    tcache_rrc.borrow_mut().observer = Some(main_window_r.clone());
 
-    // Main loop
-    info!("Starting the main loop");
-    gui::main();
-
-    // Save map view
-    main_window_r.map_view.borrow().store();
-    
     // Cleanup
     tcache_rrc.borrow_mut().store();
     info!("Exit");
