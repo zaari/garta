@@ -21,6 +21,7 @@ extern crate glib;
 use std::rc::{Rc};
 use std::cell::{RefCell};
 use std::result::*;
+use std::env;
 use self::gtk::prelude::*;
 use core::atlas::{Atlas, MapView};
 use core::tiles::{TileCache};
@@ -36,7 +37,7 @@ pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc
     // Create and run GTK app
     let app = match gtk::Application::new(Some(APP_ID), gio::APPLICATION_FLAGS_NONE) {
         Ok(app) => {
-            // Run method sends activate signal
+            // Handle 'active' signal sent by run method
             let self_r = map_win_r.clone();
             app.connect_activate(move |app| {
                 // Create GUI
@@ -49,7 +50,10 @@ pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc
                 }
             });
 
-            app.run(0, &[]);
+            // Run the app with command line args
+            let args: Vec<String> = env::args().collect();
+            let argv: Vec<&str> = args.iter().map(|x| x.as_str()).collect();
+            app.run(argv.len() as i32, argv.as_slice());
         },
         Err(e) => {
             return Err(format!("Failed to create gtk app: {:?}", e));

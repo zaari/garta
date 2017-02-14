@@ -47,5 +47,4 @@ This is the development roadmap which is subject to change depending on the phas
 
 ## Non-Goals
 - OpenStreetMap data editing (there is [JOSM](https://josm.openstreetmap.de/) for that)
-- street-based route planning (at least not at moment; [Google Maps](https://www.google.com/maps), [Gnome Maps](https://wiki.gnome.org/Apps/Maps) and numerous mobile apps do that pretty well already)
 

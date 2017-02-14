@@ -2,16 +2,17 @@
 *.sh
 !build-loop.sh
 
-# Cargo lock file is not needed
-Cargo.lock
-
-# Personal task list file
-TODO.md
-
 # Ignore all maps except osm and mapbox ones
 maps/*
 !maps/osm-*.json
 !maps/mapbox-*.json
 
+# Misc files and dirs
+Cargo.lock
+TODO.md
+*.desktop
+icons/*
+
 # Build directory
 target/*
+
