@@ -2,7 +2,7 @@
 This is the development roadmap which is subject to change depending on the phase of moon, weather, mood, fashion trends, etc. See the [change log](CHANGELOG.md) for more information about the current state.
 
 ## Version 0.2
-- https support
+- https support [**80%**]
 - refactor MapCanvas::draw (for modularity, maintainability, readability, simplicity)
 - GPX loading [**50%**]
 - units of measurement (nautical, metric, imperial) [**100%**]

@@ -18,13 +18,16 @@ extern crate regex;
 extern crate num_cpus;
 extern crate serde_json;
 extern crate hyper;
+extern crate hyper_rustls;
 
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::fs;
 use std::cmp::{min, max};
 use std::env;
 use std::path;
-use self::hyper::client::{Client};
+use self::hyper::client::{Client, ProxyConfig};
+use self::hyper::net::{HttpsConnector};
+use self::hyper_rustls::{TlsClient};
 use self::regex::{Regex};
 use core::units::{Units};
 
@@ -202,7 +205,7 @@ impl Settings {
     }
 
     /// Create a new HTTP client with or without a proxy.    
-    pub fn http_client(&self) -> Client {
+    pub fn http_client(&self, https: bool) -> Client {
         // Use environment HTTP proxy settings if automatic settings are wanted
         let (http_proxy_host, http_proxy_port) = {
             if self.http_proxy_auto {
@@ -238,13 +241,30 @@ impl Settings {
             }
         };
 
-        // Create an HTTP client
-        if let Some(ref host) = http_proxy_host {
-            if let Some(port) = http_proxy_port {
-                return Client::with_http_proxy(host.clone(), port)
+        // Either https or http client
+        if https {
+            // Create an HTTPS client
+            let ssl = TlsClient::new();
+            let connector = HttpsConnector::new(ssl);
+/* TODO            
+            if let Some(ref host) = http_proxy_host {
+                if let Some(port) = http_proxy_port {
+                    let pc = ProxyConfig::new(
+                        "https", host.clone(), port, connector, ssl);
+                    return Client::with_proxy_config(pc);
+                }
             }
+*/            
+            Client::with_connector(connector)
+        } else {
+            // Create an HTTP client
+            if let Some(ref host) = http_proxy_host {
+                if let Some(port) = http_proxy_port {
+                    return Client::with_http_proxy(host.clone(), port);
+                }
+            }
+            Client::new()
         }
-        Client::new()
     }
     
     /// Return HTTP User Agent header to be used.

@@ -1456,14 +1456,24 @@ impl TileRequestQueue {
     }
     
     fn init(&mut self, self_ar: Arc<RwLock<TileRequestQueue>>, tcache: Rc<RefCell<TileCache>>) {
-        // Start worker threads        
-        let n = settings_read().worker_threads();
-        let mut http_client = settings_read().http_client();
+        // HTTP client
+        let mut http_client = settings_read().http_client(false);
         http_client.set_read_timeout(
             Some(time::Duration::from_secs(settings_read().tile_read_timeout)));
         http_client.set_write_timeout(
             Some(time::Duration::from_secs(settings_read().tile_write_timeout)));
         let http_client_a = Arc::new(http_client);
+
+        // HTTPS client
+        let mut https_client = settings_read().http_client(true);
+        https_client.set_read_timeout(
+            Some(time::Duration::from_secs(settings_read().tile_read_timeout)));
+        https_client.set_write_timeout(
+            Some(time::Duration::from_secs(settings_read().tile_write_timeout)));
+        let https_client_a = Arc::new(https_client);
+        
+        // Start worker threads        
+        let n = settings_read().worker_threads();
         for i in 1..(n + 1) {
 
             // Put self into thread local storage
@@ -1482,6 +1492,7 @@ impl TileRequestQueue {
             // Start the worker threads        
             let trqueue_t = self_ar.clone();
             let http_client_t = http_client_a.clone();
+            let https_client_t = https_client_a.clone();
             let nt_m  = self.new_reqs_mutex.clone();
             let nt_cv = self.new_reqs_condvar.clone();
             match thread::Builder::new().name(format!("worker-{}", i)).spawn( move || {
@@ -1542,7 +1553,7 @@ impl TileRequestQueue {
                         
                         // Download the requested tile
                         if download_needed {
-                            let res = treq.source.fetch_tile_data(&treq, &http_client_t);
+                            let res = treq.source.fetch_tile_data(&treq, &http_client_t, &https_client_t);
                         
                             // Notify TileCache first
                             let res_cloned = res.clone();
@@ -1691,7 +1702,7 @@ impl TileSource {
     }
     
     /// Download tile data from the source. 
-    fn fetch_tile_data(&self, treq: &TileRequest, client: &Arc<Client>) -> TileRequestResult {
+    fn fetch_tile_data(&self, treq: &TileRequest, http_client: &Arc<Client>, https_client: &Arc<Client>) -> TileRequestResult {
         if self.urls.len() > 0 {
             let url = self.make_url(&treq).unwrap();
             let mut data: Vec<u8> = Vec::new();
@@ -1717,6 +1728,13 @@ impl TileSource {
                 }
             
                 // Request tile data from a remote server with GET
+                let client = {
+                    if url.starts_with("https:") {
+                        https_client
+                    } else {
+                        http_client
+                    }
+                };
                 match client.get(url.as_str()).headers(headers).send() {
                     Ok(mut response) => {
                         debug!("Received response {} for tile {} data request for url {}", 

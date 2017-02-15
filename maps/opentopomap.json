@@ -1,0 +1,23 @@
+{
+  "slug": "opentopomap",
+  "name": "OpenTopoMap",
+  "tile_width": 256,
+  "tile_height": 256,
+  "max_zoom_level": 17,
+  "urls": [
+    "https://a.tile.opentopomap.org/${z}/${x}/${y}.png",
+    "https://b.tile.opentopomap.org/${z}/${x}/${y}.png",
+    "https://c.tile.opentopomap.org/${z}/${x}/${y}.png"
+  ],
+  "copyrights": [
+    {
+      "text": "© OpenStreetMap contributors",
+      "url": "https://www.openstreetmap.org/copyright"
+    },
+    {
+      "text": "© OpenTopoMap",
+      "url": "https://www.opentopomap.org"
+    }
+  ]
+}
+
