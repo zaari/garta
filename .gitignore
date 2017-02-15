@@ -6,6 +6,7 @@
 maps/*
 !maps/osm-*.json
 !maps/mapbox-*.json
+!maps/opentopomap.json
 
 # Misc files and dirs
 Cargo.lock

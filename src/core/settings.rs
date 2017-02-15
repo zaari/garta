@@ -51,6 +51,9 @@ pub static APP_VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
 /// Default maximum zoom level for maps that don't specify this information.
 pub fn default_max_zoom_level() -> u8 { 16 }
 
+/// Map window default size in pixels
+pub static MAP_WINDOW_DEFAULT_SIZE: (i32, i32) = (800, 800);
+
 /// A singleton-like construct for settings_read and settings_write methods.
 lazy_static! {
     static ref SETTINGS: RwLock<Settings> = RwLock::new(Settings::new());

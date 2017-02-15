@@ -3,15 +3,16 @@ This is the development roadmap which is subject to change depending on the phas
 
 ## Version 0.2
 - refactor MapCanvas::draw (for modularity, maintainability, readability, simplicity)
-- GPX loading
-- units of measurement (nautical, metric, imperial)
-- vehicles
+- GPX loading [**50%**]
+- units of measurement (nautical, metric, imperial) [**100%**]
+- vehicles [**80%**]
 - track rendering
 - track statistics
 - keyboard controls
 - transparent map layers
 - layers dialog
 - full data persistence
+- application icon and sample .desktop file
 
 ## Version 0.3
 - track editing
@@ -23,6 +24,7 @@ This is the development roadmap which is subject to change depending on the phas
 ## Version 0.4
 - attractions (a.k.a. geo-bookmarks)
 - drag & drop
+- installer and packaging
 
 ## Version 0.5
 - internationalization, gettext (contributors needed)

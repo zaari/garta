@@ -30,7 +30,7 @@ use core::id::{UniqueId};
 use core::tiles::{TileCache, TileObserver, TileRequest};
 use core::settings::{settings_read};
 use gui::mapcanvas::{MapCanvas};
-//use core::settings::{settings_read, settings_write};
+use core::settings::{MAP_WINDOW_DEFAULT_SIZE};
 
 /// Main window.
 pub struct MapWindow {
@@ -177,6 +177,8 @@ impl MapWindow {
                     }
                     if let Some(win_size) = view.window_size {
                         win.set_default_size(win_size.0, win_size.1);
+                    } else {
+                        win.set_default_size(MAP_WINDOW_DEFAULT_SIZE.0, MAP_WINDOW_DEFAULT_SIZE.0);
                     }
                 }
                 

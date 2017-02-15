@@ -3,6 +3,7 @@ name = "garta"
 description = "Garta is going to be a GPX viewer, analyzer and editor for GTK3"
 version = "0.2.0-dev"
 authors = ["Timo Saarinen <zaari@swiss-email.neomailbox.net>"]
+publish = false
 
 [build-dependencies]
 serde_codegen = "0.9"

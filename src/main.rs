@@ -53,7 +53,7 @@ fn main() {
     let tcache_time0 = Instant::now();
     info!("Initializing tile cache");
     let tcache_rrc = create_tile_cache();
-    info!("Cache initialized in {:.3} seconds", duration_to_seconds(&tcache_time0.elapsed()));
+    debug!("Cache initialized in {:.3} seconds", duration_to_seconds(&tcache_time0.elapsed()));
 
     // Create atlas
     let atlas = RefCell::new(Atlas::new("unnamed".into()));
@@ -98,8 +98,8 @@ fn main() {
         map_view.borrow_mut().map_slug = "osm-carto".into(); // TODO: better validation
     }
 
-    // Open GUI
-    info!("Showing the main window");
+    // Create GUI and start GTK main
+    info!("Run {} with GUI", APP_NAME);
     match gui::run_app(atlas, map_view, tcache_rrc.clone()) {
         Ok(map_win) => {
             // Save map view
@@ -110,8 +110,8 @@ fn main() {
         }
     }
 
-    // Cleanup
+    // Persist tile cache state
     tcache_rrc.borrow_mut().store();
-    info!("Exit");
+    debug!("Exit");
 }
 
