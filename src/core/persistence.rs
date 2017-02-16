@@ -17,12 +17,14 @@
 extern crate serde;
 extern crate serde_json;
 extern crate chrono;
+extern crate hyper;
 
 use std::io;
 use std::fs;
 use std::path;
 use std::fmt;
 use self::chrono::{DateTime, UTC};
+use self::hyper::{Url};
 
 /// Loads all JSON elements from the given directory and sends them to closure 'handle_element'.
 /// Doesn't recurse subdirectories.
@@ -203,6 +205,59 @@ pub fn deserialize_datetime<D>(f: D) -> Result<DateTime<UTC>, D::Error>
         Err(e) => {  
             Err(serde::de::Error::custom(e.to_string()))
         }
+    }
+}
+
+/// Serializer for hyper::Url
+pub fn serialize_url<S>(url: &Url, f: S) -> Result<S::Ok, S::Error> 
+        where S: serde::Serializer,
+{
+    f.serialize_str(url.as_str())
+}
+
+/// Deserializer for hyper::Url
+pub fn deserialize_url<D>(f: D) -> Result<Url, D::Error> 
+        where D: serde::Deserializer
+{
+    let s: String = serde::Deserialize::deserialize(f)?;
+    match Url::parse(s.as_str()) {
+        Ok(url) => { 
+            Ok(url)
+        }
+        Err(e) => {  
+            Err(serde::de::Error::custom(e.to_string()))
+        }
+    }
+}
+
+
+/// Serializer for hyper::Url
+pub fn serialize_option_url<S>(url: &Option<Url>, f: S) -> Result<S::Ok, S::Error> 
+        where S: serde::Serializer,
+{
+    if url.is_some() {
+        f.serialize_str(url.clone().unwrap().as_str())
+    } else {
+        f.serialize_str("")
+    }
+}
+
+/// Deserializer for hyper::Url
+pub fn deserialize_option_url<D>(f: D) -> Result<Option<Url>, D::Error> 
+        where D: serde::Deserializer
+{
+    let s: String = serde::Deserialize::deserialize(f)?;
+    if s != "" {
+        match Url::parse(s.as_str()) {
+            Ok(url) => { 
+                Ok(Some(url))
+            }
+            Err(e) => {  
+                Err(serde::de::Error::custom(e.to_string()))
+            }
+        }
+    } else {
+        Ok(None)
     }
 }
 

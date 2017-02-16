@@ -575,7 +575,7 @@ impl MapCanvas {
         // Check whether the click is on a map element hotspot or not
         if let Some(ref map_win) = self.map_win {
             // The default mode is scrolling
-            let mut new_mode = MapCanvasMode::Scrolling;
+            let mut new_mode = MapCanvasMode::Scrolling; // false warning
             self.scroll_history.borrow_mut().clear();
             *self.orig_pos.borrow_mut() = pos;
             *self.orig_center.borrow_mut() = map_win.map_view.borrow().center;
@@ -809,9 +809,7 @@ impl MapCanvas {
     /// Event handler for mouse wheel.
     fn scroll_event(&self, ev: &gdk::EventScroll) {
         if let Some(ref map_win) = self.map_win {
-            let mut cc = CoordinateContext::new(map_win.clone(), self);
             let mouse_wpos = Vector::with_tuple(ev.get_position());
-            let mut zoom_op = 0i8;
 
             if let Some(ref widget) = self.widget {
                 // Zoom direction

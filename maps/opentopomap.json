@@ -1,9 +1,9 @@
 {
   "slug": "opentopomap",
   "name": "OpenTopoMap",
-  "tile_width": 256,
-  "tile_height": 256,
-  "max_zoom_level": 17,
+  "tile-width": 256,
+  "tile-height": 256,
+  "max-zoom-level": 17,
   "urls": [
     "https://a.tile.opentopomap.org/${z}/${x}/${y}.png",
     "https://b.tile.opentopomap.org/${z}/${x}/${y}.png",

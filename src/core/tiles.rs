@@ -93,12 +93,11 @@ use std::path;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
-use std::ffi;
 use std::mem;
 use std::time;
 use self::chrono::{DateTime, UTC, TimeZone, Duration};
 use self::hyper::header;
-use self::hyper::{Client};
+use self::hyper::{Client, Url};
 use self::hyper::status::{StatusCode};
 use self::rand::{Rng};
 use self::cairo::{Format, ImageSurface};
@@ -168,7 +167,11 @@ impl TileCache {
 
     /// Return tile for the given request. The result may be an approximation.    
     pub fn get_tile(&mut self, treq: &TileRequest) -> Option<&mut Tile> {
-        //debug!("get_tile: {:?}, contains: {:?}", treq, self.tiles.get(&tile_key).unwrap());
+        if self.tiles.get(&treq.to_key()).is_some() {
+            debug!("get_tile: {:?}, contains: {:?}", treq, self.tiles.get(&treq.to_key()) );
+        } else {
+            debug!("get_tile: {:?}, contains: --", treq);
+        }
         
         // If the coordinates are out of bounds, return an empty tile
         if treq.y < 0 || treq.y >= (1 << treq.z) {
@@ -1160,12 +1163,6 @@ impl TileRequest {
             cache_path.push(name[14..16].to_string());
         }
         
-        // Filename extension (if any)
-        if let Some(ext_str) = self.source.to_filename_extension() {
-            let ext = ffi::OsStr::new(ext_str.as_str());
-            cache_path.set_extension(ext);
-        }
-        
         // Success
         Ok(cache_path)
     }
@@ -1653,8 +1650,8 @@ pub struct TileSource {
     // File system friendly name
     pub slug: String,
 
-    /// An array of mutually optional urls
-    pub urls: Vec<String>,
+    /// An array of mutually optional url templates
+    pub url_templates: Vec<String>,
     
     /// Token required by the service provider
     pub token: String,
@@ -1677,10 +1674,10 @@ pub struct TileSource {
 }
 
 impl TileSource {
-    pub fn new(slug: String, urls: Vec<String>, token: String, tile_width: i32, tile_height: i32) -> TileSource {
+    pub fn new(slug: String, url_templates: Vec<String>, token: String, tile_width: i32, tile_height: i32) -> TileSource {
         TileSource {
             slug: slug,
-            urls: urls,
+            url_templates: url_templates,
             token: token,
             user_agent: None,
             referer: None,
@@ -1690,25 +1687,25 @@ impl TileSource {
         }
     }
 
-    /// Add a new url with vars.
+    /// Add a new url template.
     ///
     /// the following strings will be substituted:
     /// ${x} - x coordinate
     /// ${y} - y coordinate
     /// ${z} - zoom level
     /// ${token} - token required by the service provider
-    pub fn add_url(&mut self, url: String) {
-        self.urls.push(url);
+    pub fn add_url_template(&mut self, url_template: String) {
+        self.url_templates.push(url_template);
     }
     
     /// Download tile data from the source. 
     fn fetch_tile_data(&self, treq: &TileRequest, http_client: &Arc<Client>, https_client: &Arc<Client>) -> TileRequestResult {
-        if self.urls.len() > 0 {
+        if self.url_templates.len() > 0 {
             let url = self.make_url(&treq).unwrap();
             let mut data: Vec<u8> = Vec::new();
-
-            let mut expires = None; // false warning (with Rust 1.15 nightly at least)
-            if url.starts_with("file:") {
+            
+            let mut expires = None; // false warning
+            if url.scheme() == "file" {
                 // Load data from local disk 
                 return TileRequestResult::with_code(treq, TileRequestResultCode::UnknownError); // TODO
             } else {
@@ -1729,7 +1726,7 @@ impl TileSource {
             
                 // Request tile data from a remote server with GET
                 let client = {
-                    if url.starts_with("https:") {
+                    if url.scheme() == "https" {
                         https_client
                     } else {
                         http_client
@@ -1793,31 +1790,28 @@ impl TileSource {
         }
     }
     
-    /// Make a url substituting url variables with values from the TileRequest.
-    pub fn make_url(&self, treq: &TileRequest) -> Result<String, String> {
-        if self.urls.len() > 0 {
-            let index = rand::thread_rng().gen::<usize>() % self.urls.len();
-            let url = self.urls.get(index).unwrap();
-            let url_with_vars = url.replace("${x}", &(format!("{}", treq.wrap_x()).as_str()))
-                                   .replace("${y}", &(format!("{}", treq.y).as_str()))
-                                   .replace("${z}", &(format!("{}", treq.z).as_str()))
-                                   .replace("${token}", self.token.as_str());
-            Ok(url_with_vars)
+    /// Make a url substituting url template variables with values from the TileRequest.
+    pub fn make_url(&self, treq: &TileRequest) -> Result<Url, String> {
+        if self.url_templates.len() > 0 {
+            let index = rand::thread_rng().gen::<usize>() % self.url_templates.len();
+            let ut = self.url_templates.get(index).unwrap();
+            let url_string_with_vars = 
+                    ut.replace("${x}", &(format!("{}", treq.wrap_x()).as_str()))
+                      .replace("${y}", &(format!("{}", treq.y).as_str()))
+                      .replace("${z}", &(format!("{}", treq.z).as_str()))
+                      .replace("${token}", self.token.as_str());
+            match Url::parse(url_string_with_vars.as_str()) {
+                Ok(url) => {
+                    debug!("make_url: url={}", url.to_string());
+                    Ok(url)
+                },
+                Err(e) => {
+                    Err(format!("Tile url creation error: {}", e.to_string()))
+                }
+            }
         } else {
-            Err(format!("No urls defined for the tile source {}", self.slug))
+            Err(format!("No tile urls defined for the tile source {}", self.slug))
         }
-    }
-    
-    /// Returns the extension of image file ("jpg", "png", etc).
-    fn to_filename_extension(&self) -> Option<String> {
-        /* Doesn't work with url parameters
-        if let Some(ref url) = self.urls.get(0) {
-            let n = url.len();
-            return Some(url[(n - 3) .. n].into()); // TODO: smarter way
-        }
-        */
-        
-        None
     }
 }
 
@@ -1872,7 +1866,6 @@ mod tests {
     //use std::collections::{HashMap};
     use super::*;
 
-/*
     #[test]
     fn test_tile_source() {
         // Initialize logger
@@ -1894,22 +1887,26 @@ mod tests {
         // Test making urls
         match tile_source.make_url(&treq) {
             Ok(url) => {
-                assert!(url == "http://a.tile.openstreetmap.org/1/0/0.png" || 
-                        url == "http://b.tile.openstreetmap.org/1/0/0.png");
+                assert!(url.as_str() == "http://a.tile.openstreetmap.org/1/0/0.png" || 
+                        url.as_str() == "http://b.tile.openstreetmap.org/1/0/0.png");
+                assert!(url.scheme() == "http");
+                assert!(url.host_str().unwrap() == "a.tile.openstreetmap.org" || 
+                        url.host_str().unwrap() == "b.tile.openstreetmap.org");
             },
             Err(e) => {
                 panic!(e.to_string());
             }
         }
-        
+
+/*        
         // Test GET
         let http_client_a = Arc::new(Client::new());
         let trr = tile_source.fetch_tile_data(&treq, &http_client_a);        
         assert!(trr.to_key() == treq.to_key());
         assert!(trr.data.len() > 4000);
         assert!(trr.code == TileRequestResultCode::Ok);
+*/        
     }
-*/    
     
     #[test]
     fn test_tile_request() {

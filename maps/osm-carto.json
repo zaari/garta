@@ -1,9 +1,9 @@
 {
   "slug": "osm-carto",
   "name": "OSM Carto",
-  "tile_width": 256,
-  "tile_height": 256,
-  "max_zoom_level": 19,
+  "tile-width": 256,
+  "tile-height": 256,
+  "max-zoom-level": 19,
   "urls": [
     "http://a.tile.openstreetmap.org/${z}/${x}/${y}.png",
     "http://b.tile.openstreetmap.org/${z}/${x}/${y}.png",

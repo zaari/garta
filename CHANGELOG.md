@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- https support ([hyper-rustls])
 - passing command line arguments to GTK 
 
 ## 0.1 - 2017-02-08
@@ -19,4 +20,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - logging (env_logger)
 
 [Unreleased]: https://github.com/zaari/garta/compare/v0.1.0...master
+[hyper-rustls]: https://github.com/ctz/hyper-rustls
 

@@ -11,8 +11,8 @@ serde_codegen = "0.9"
 [dependencies]
 image       = "0.12"
 hyper       = "0.10"
-hyper-rustls= "*"
-chrono      = "0.2"
+hyper-rustls= "^0.3.1"
+chrono      = "0.2" # TODO: "0.3"
 log         = "0.3"
 env_logger  = "0.4"
 

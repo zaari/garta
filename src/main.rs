@@ -16,7 +16,7 @@
 
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#![allow(unused_assignments)] // ...to avoid false warnings
+#![allow(unused_assignments)] // ...to avoid false warnings (should make a bug report about this)
 
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate lazy_static;
@@ -63,7 +63,11 @@ fn main() {
     for dir_name in settings_read().map_directories() {
         match deserialize_all(dir_name, |map: Map, file_stem: &String| {
             debug!("Loaded map {} ({})", map.name, file_stem);
-            atlas.borrow_mut().maps.insert(map.slug.clone(), map);
+            if map.url_templates.len() > 0 {
+                atlas.borrow_mut().maps.insert(map.slug.clone(), map);
+            } else {
+                warn!("Map {} doesn't have any urls defined!", map.name);
+            }
         }) {
             Ok(()) => { }
             Err(e) => { warn!("Failed to load map: {}", e); }

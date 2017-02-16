@@ -26,10 +26,11 @@ use std::cmp::{min, max};
 use std::env;
 use std::path;
 use self::hyper::client::{Client, ProxyConfig};
+use self::hyper::{Url};
 use self::hyper::net::{HttpsConnector};
 use self::hyper_rustls::{TlsClient};
-use self::regex::{Regex};
 use core::units::{Units};
+use core::persistence::{serialize_option_url, deserialize_option_url};
 
 /// Default number of days until tiles expire if the server doesn't send expiration information.
 pub static DEFAULT_TILE_EXPIRE_DAYS: i64 = 7;
@@ -92,10 +93,12 @@ pub struct Settings {
     pub http_proxy_auto: bool,
     
     /// HTTP proxy hostname,
-    pub http_proxy_host: Option<String>,
+    #[serde(serialize_with = "serialize_option_url", deserialize_with = "deserialize_option_url")]
+    pub http_proxy_url: Option<Url>,
     
-    /// HTTP proxy port.
-    pub http_proxy_port: Option<u16>,
+    /// HTTPS proxy hostname,
+    #[serde(serialize_with = "serialize_option_url", deserialize_with = "deserialize_option_url")]
+    pub https_proxy_url: Option<Url>,
     
     /// Number of times to try reloading HTTP resources.
     pub http_retry_count: u8,
@@ -127,8 +130,8 @@ impl Settings {
             tile_write_timeout: 10,
             http_retry_count: 3,
             http_proxy_auto: true,
-            http_proxy_host: None,
-            http_proxy_port: None,
+            http_proxy_url: None,
+            https_proxy_url: None,
             tile_mem_cache_capacity: Some(256 * 1024 * 1024),
             tile_disk_cache_capacity: Some(1000 * 1024 * 1024),
             main_window_geometry: "".to_string(),
@@ -207,37 +210,62 @@ impl Settings {
     /// Create a new HTTP client with or without a proxy.    
     pub fn http_client(&self, https: bool) -> Client {
         // Use environment HTTP proxy settings if automatic settings are wanted
-        let (http_proxy_host, http_proxy_port) = {
+        let http_proxy_url = {
             if self.http_proxy_auto {
                 match env::var("http_proxy") {
                     Ok(var) => {
-                        // Parse the environment variable
-                        let re = Regex::new(r"http://([a-z0-9\\-\\.]+):([0-9]+)").unwrap();
-                        if let Some(cap) = re.captures(var.as_str()) {
-                            let hostname = &cap[1].to_string();
-                            let port = &cap[2].parse().unwrap_or(80);
-                            debug!("Auto-proxy wanted and environment http_proxy used: {}:{}", hostname, port);
-                            (Some(hostname.clone()), Some(*port))
-                        } else {
-                            error!("Auto-proxy wanted but environment variable http_proxy has unexpected syntax: {}", var);
-                            (None, None)
+                        match Url::parse(var.as_str()) {
+                            Ok(url) => {
+                                Some(url)
+                            },
+                            Err(e) => {
+                                debug!("Auto-proxy wanted but no proxy environment variables available");
+                                None
+                            }
                         }
                     },
                     Err(e) => {
                         debug!("Auto-proxy wanted but no proxy environment variables available");
-                        (None, None)
+                        None
                     }
                 }
             } else {
-                if self.http_proxy_host.is_some() && self.http_proxy_port.is_some() {
-                    debug!("No auto-proxy wanted. Returning {}:{}", 
-                        self.http_proxy_host.clone().unwrap(), 
-                        self.http_proxy_port.unwrap());
-                    (self.http_proxy_host.clone(), self.http_proxy_port)
+                if let Some(ref u) = self.http_proxy_url {
+                    debug!("No auto-proxy wanted. Returning {}", u.as_str());
                 } else {
-                    debug!("No auto-proxy wanted, no proxy defined.");
-                    (None, None)
+                    debug!("No auto-proxy wanted, no http proxy defined.");
                 }
+                self.http_proxy_url.clone()
+            }
+        };
+
+        // HTTPS proxy
+        let https_proxy_url = {
+            if self.http_proxy_auto {
+                match env::var("https_proxy") {
+                    Ok(var) => {
+                        match Url::parse(var.as_str()) {
+                            Ok(url) => {
+                                Some(url)
+                            },
+                            Err(e) => {
+                                debug!("Auto-proxy wanted but no proxy environment variables available");
+                                None
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        debug!("Auto-proxy wanted but no proxy environment variables available");
+                        None
+                    }
+                }
+            } else {
+                if let Some(ref u) = self.https_proxy_url {
+                    debug!("No auto-proxy wanted. Returning {}", u.as_str());
+                } else {
+                    debug!("No auto-proxy wanted, no https proxy defined.");
+                }
+                self.https_proxy_url.clone()
             }
         };
 
@@ -246,21 +274,25 @@ impl Settings {
             // Create an HTTPS client
             let ssl = TlsClient::new();
             let connector = HttpsConnector::new(ssl);
-/* TODO            
-            if let Some(ref host) = http_proxy_host {
-                if let Some(port) = http_proxy_port {
-                    let pc = ProxyConfig::new(
-                        "https", host.clone(), port, connector, ssl);
-                    return Client::with_proxy_config(pc);
+/*            
+            if let Some(ref url) = https_proxy_url {
+                if let Some(ref host) = url.host_str() {
+                    if let Some(ref port) = url.port_or_known_default() {
+                        let pc = ProxyConfig::new(
+                            url.scheme(), *host, *port, connector, ssl); // TODO: scheme
+                        return Client::with_proxy_config(pc);
+                    }
                 }
             }
 */            
             Client::with_connector(connector)
         } else {
             // Create an HTTP client
-            if let Some(ref host) = http_proxy_host {
-                if let Some(port) = http_proxy_port {
-                    return Client::with_http_proxy(host.clone(), port);
+            if let Some(ref url) = http_proxy_url {
+                if let Some(host) = url.host() {
+                    if let Some(ref port) = url.port_or_known_default() {
+                        return Client::with_http_proxy(host.to_string(), *port);
+                    }
                 }
             }
             Client::new()

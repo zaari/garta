@@ -1,6 +1,6 @@
 # Garta &emsp; [![Travis Build Status](https://travis-ci.org/zaari/garta.svg?branch=master)](https://travis-ci.org/zaari/garta) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
-Garta is a geography application for [GTK+ 3] toolkit (used by e.g. [GNOME 3 desktop environment] on [GNU/Linux operating system] and written in [Rust programming language]. Currently the application allows you to explore tile-based world maps. GPX loading will be implemented with release [0.2] and saving with release 0.3. More future goals can be found in the roadmap, and the current state in the change log.
+This is a geography application for [GTK+ 3] toolkit (used by e.g. [GNOME 3 desktop environment] on [GNU/Linux operating system]) and written in [Rust programming language]. Since release [0.1] Garta allows you to explore tile-based world maps. GPX loading will be implemented with release [0.2] and saving with release 0.3. More future goals can be found in the roadmap, and the current state in the change log.
 
 * [Road Map]
 * [Change Log]
@@ -45,6 +45,7 @@ cargo build --release
 [GNU/Linux operating system]: https://en.wikipedia.org/wiki/Linux
 [Rust programming language]: https://www.rust-lang.org/en-US/
 [0.2]: https://github.com/zaari/garta/milestone/2
+[0.1]: https://github.com/zaari/garta/releases/tag/v0.1.0
 [Road Map]: ROADMAP.md
 [Change Log]: CHANGELOG.md
 

@@ -242,15 +242,15 @@ pub struct Map {
     pub name: String,
     
     /// Tile width
-    #[serde(default)]
+    #[serde(default, rename = "tile-width")]
     pub tile_width: Option<i32>,
     
     /// Tile height
-    #[serde(default)]
+    #[serde(default, rename = "tile-height")]
     pub tile_height: Option<i32>,
 
     /// Maximum zoom level provided by the map
-    #[serde(default = "default_max_zoom_level")]
+    #[serde(default = "default_max_zoom_level", rename = "max-zoom-level")]
     pub max_zoom_level: u8,
     
     /// True if the map is to be used as an overlay
@@ -265,11 +265,11 @@ pub struct Map {
     #[serde(default)]
     pub expire_override: Option<u16>,
 
-    /// Tile urls
-    #[serde(default)]
-    pub urls: Vec<String>,
+    /// Tile url templates
+    #[serde(default, rename = "urls")]
+    pub url_templates: Vec<String>,
 
-    /// Token to be substituded in url. Either a reference to tokens or a literal token.    
+    /// Token to be substituded in url templates. Either a reference to tokens or a literal token.    
     #[serde(default)]
     pub token: String,
 
@@ -298,7 +298,7 @@ impl Map {
             transparent: false,
             dark: false,
             expire_override: None,
-            urls: Vec::new(),
+            url_templates: Vec::new(),
             token: "".into(),
             user_agent: None,
             referer: None,
@@ -322,7 +322,7 @@ impl Map {
         if self.tile_width.is_some() && self.tile_height.is_some() {
             Some(TileSource {
                 slug: self.slug.clone(),
-                urls: self.urls.clone(),
+                url_templates: self.url_templates.clone(),
                 token: token,
                 user_agent: self.user_agent.clone(),
                 referer: self.referer.clone(),
