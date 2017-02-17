@@ -1033,31 +1033,6 @@ impl CoordinateContext {
     pub fn gpos_to_loc(&mut self, global_pos: Vector) -> Location {
         self.projection.global_pixel_pos_to_location(global_pos, self.ppdoe)
     }
-
-/*    
-    /// Returns tile position, offset (within tile) and tile width of the view.
-    pub fn tile_pos(&mut self, global_pos: Vector) -> (Vector, (i32, i32), (i32, i32)) {
-        let global_nw_pos = self.projection.northwest_global_pixel(self.ppdoe);            
-        let center_pos = self.projection.location_to_global_pixel_pos(self.center, self.ppdoe);
-        let view_nw_pos = center_pos - Vector::new(vw / 2.0, vh / 2.0);
-
-        let tw = self.tile_width;
-        let th = self.tile_height;
-
-        (Vector::new(
-            (view_nw_pos.x - global_nw_pos.x) % tw,
-            (view_nw_pos.y - global_nw_pos.y) % th,
-         ), 
-         (
-            ((view_nw_pos.x - global_nw_pos.x) / tw) as i32,
-            ((view_nw_pos.y - global_nw_pos.y) / th) as i32,
-         ), 
-         (
-            ((vw + tw - 1.0) / tw + 1.0) as i32,
-            ((vh + th - 1.0) / th + 1.0) as i32,
-         ))
-    }
-*/    
 }
 
 // -------------------------------------------------------------------------------------------------

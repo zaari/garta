@@ -73,8 +73,12 @@ fn main() {
             Err(e) => { warn!("Failed to load map: {}", e); }
         }
     }
+    if atlas.borrow().maps.len() == 0 {
+        error!("No maps found.");
+        exit(1);
+    }
     
-    // Load tokens
+    // Load tokens (if exist)
     for dir_name in settings_read().token_directories() {
         match deserialize_all(dir_name, |token: MapToken, file_stem: &String| {
             debug!("Loaded token {}", file_stem);

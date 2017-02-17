@@ -1,30 +1,31 @@
 # Garta Roadmap
-This is the development roadmap which is subject to change depending on the phase of moon, weather, mood, fashion trends, etc. See the [change log](CHANGELOG.md) for more information about the current state.
+This is an open-ended development roadmap for Garta. See the [change log] for more information about the current state.
 
 ## Version 0.2
-- https support [**80%**]
-- refactor MapCanvas::draw (for modularity, maintainability, readability, simplicity)
-- GPX loading [**50%**]
-- units of measurement (nautical, metric, imperial) [**100%**]
-- vehicles [**80%**]
+- GPX loading **[50%]**
 - track rendering
 - track statistics
-- keyboard controls
-- transparent map layers
 - layers dialog
-- full data persistence
-- application icon and sample .desktop file
+- transparent map layers
+- keyboard controls
+- application icon and sample .desktop file **[90%]**
+- units of measurement (nautical, metric, imperial) **[100%]**
+- vehicles **[80%]**
+- full data persistence **[50%]**
+- https support **[80%]**
+- MapCanvas::draw refactored (for better modularity, maintainability, readability and simplicity)
 
 ## Version 0.3
 - track editing
 - route planning
 - waypoints
 - GPX saving
-- coordinates module relicensing and moving to a separate repository and also published at crates.io
+- coordinates module relicensed and moved to a separate repository and also published at crates.io
 
 ## Version 0.4
-- attractions (a.k.a. geo-bookmarks)
+- attractions (a.k.a. geo bookmarks) **[10%]**
 - drag & drop
+- man page
 - installer and packaging
 
 ## Version 0.5
@@ -37,23 +38,32 @@ This is the development roadmap which is subject to change depending on the phas
 ## Version 0.7
 - vehicles dialog
 - track replay
+- fullscreen mode
+- sunrise/sunset awareness
 
 ## Version 0.8
-- find locations by name, and other possible meta queries
+- locations search by name, and other possible meta queries
 - settings dialog
-- settings persistence
+- settings persistence **[20%]**
 
 ## Version 1.0
 - stable file formats and directory structure
 - polished error handling and code in general
-- removing debugging from stable parts of the code
+- debugging removed from stable parts of the code
 
 ## Post-1.0
 - KML import and export
-- support for GeoRSS, GeoJSON, GeoURI and GeoTagging
+- GeoRSS, GeoJSON, GeoURI and GeoTagging
 - collaborative layers editing
+- vector tile maps
+- integration with sports web services
 
 ## Non-Goals
-- OpenStreetMap data editing (there is [JOSM](https://josm.openstreetmap.de/) for that)
-- street-based routing (Google Maps, Gnome Maps and numerous mobile phone apps do that pretty well)
+- OpenStreetMap data editing (there is [JOSM] for that)
+- street-based routing ([Google Maps], [Gnome Maps] and especially numerous smartphone apps do that pretty well – or if you are concerned about your privacy the traditional paper maps still exist)
+
+[change log]: CHANGELOG.md
+[JOSM]: https://josm.openstreetmap.de
+[Google Maps]: http://maps.google.com
+[Gnome Maps]: https://wiki.gnome.org/Apps/Maps 
 

@@ -18,7 +18,7 @@
 
 Tiles module solves two problems: 1) background tile loading & saving and 2) background 
 tile processing, to not cause lag on the GTK main thread which takes care of map canvas 
-rendering. So far gtk-rs crate doesn't support asynchronous I/O of glib.
+rendering.
 
 This module both manages tile cache and takes care of downloading new tiles from network 
 using worker threads. It also converts the downloaded image files into image buffers that 
@@ -846,8 +846,8 @@ impl Tile {
         if let Some(ref self_surface) = self.surface {
             // Paint from source surface
             if true {
-                // This is a mediocre workaround to get rid of scaling artifacts at edges.
-                // There are couple ways to fix this but none of them is supported by
+                // This is a mediocre workaround to get rid of scaling artifacts on edges.
+                // There are couple ways that may fix this but none of them is supported by
                 // gtk-rs binding at moment:
                 //  1) convert tile to Pixbuf and scale it with InterpType::NEAREST
                 //  2) set SurfacePattern as source
@@ -1918,41 +1918,5 @@ mod tests {
         assert_eq!(1, TileRequest::new(1, 1, 5, 0, 2, 1, tile_source.clone()).wrap_x());
         
     }
-
-/*    
-    #[test]
-    fn test_tile_order() {
-        let mut tiles: HashMap<String, Tile> = HashMap::new();
-
-        // Source and requests
-        let tile_source = TileSource::new("osm-carto".into(), Vec::new(), "".into(), 256,  256, );
-        let treq1 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
-        let treq2 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
-        let treq3 = TileRequest::new(1, 1, -2, 0, 2, 1, tile_source.clone());
-        
-        // Tiles
-        let tile1 = Tile::new_with_request(&treq1);
-        sleep(time::Duration::from_millis(1));
-        let tile2 = Tile::new_with_request(&treq2);
-        sleep(time::Duration::from_millis(1));
-        let tile3 = Tile::new_with_request(&treq3);
-        assert!(tile1.access_time < tile2.access_time);
-        assert!(tile2.access_time < tile3.access_time);
-        
-        // Insert tiles into list
-        tiles.insert("b".into(), tile1);
-        tiles.insert("a".into(), tile2);
-        tiles.insert("c".into(), tile3);
-
-        // Check order        
-        let mut previous_access_time: Option<DateTime<UTC>> = None;
-        for (ref tile_key, ref mut tile) in tiles.iter() {
-            if let Some(prev_access_time) = previous_access_time {
-                assert!(prev_access_time <= tile.access_time);
-            }
-            previous_access_time = Some(tile.access_time);
-        }
-    }
-*/    
 }
 
