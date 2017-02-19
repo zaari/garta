@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog] and this project adheres to [Semantic 
 
 ## [Unreleased]
 ### Added
+- map cycling with TAB key
+- zoom in/out with keyboard
 - https support ([hyper-rustls])
 - passing command line arguments to GTK 
 

@@ -99,9 +99,10 @@ pub struct MapCanvas {
     // Temporary surface for tile grid
     tile_sprite: RefCell<Option<Sprite>>,
     
-    // Mouse location of the previous event.
+    // Mouse location for movtion-related events.
     orig_pos: RefCell<Vector>,
     orig_center: RefCell<Location>,
+    prev_motion_wpos: RefCell<Vector>,
     
     // Accuracy of the view (degrees per pixel)
     accuracy: RefCell<Option<f64>>,
@@ -152,6 +153,7 @@ impl MapCanvas {
             tile_sprite: RefCell::new(None),
             orig_pos: RefCell::new(Vector::zero()),
             orig_center: RefCell::new(Location::new(0.0, 0.0)),
+            prev_motion_wpos: RefCell::new(Vector::zero()),
             accuracy: RefCell::new(None),
             scroll_history: RefCell::new(VecDeque::with_capacity(ANIMATION_SCROLL_HISTORY_LENGTH)),
             scroll_speed_vec: RefCell::new(Vector::zero()),
@@ -175,6 +177,7 @@ impl MapCanvas {
         canvas.set_size_request(512, 512);
         canvas.set_visible(true);
         canvas.set_sensitive(true);
+        canvas.set_can_focus(true);
 
         // Enable the events you wish to get notified about.
         // The 'draw' event is already enabled by the DrawingArea.
@@ -219,6 +222,11 @@ impl MapCanvas {
             let map_canvas = mwin.map_canvas.borrow();
             map_canvas.scroll_event(event); 
             Inhibit(true) 
+        } );
+        let mwin = map_win.clone();
+        canvas.connect_key_press_event( move |widget, event| { 
+            let map_canvas = mwin.map_canvas.borrow();
+            Inhibit(map_canvas.key_press_event(event)) 
         } );
                                         
         self.widget = Some(canvas);
@@ -566,6 +574,46 @@ impl MapCanvas {
         }
     }
 
+    /// Event handler for keyboard press events.
+    fn key_press_event(&self, ev: &gdk::EventKey) -> bool {
+        let keyval = ev.get_keyval();
+        debug!("key_press_event: event.keyval={:?}", keyval);
+        
+	    if keyval == gdk::enums::key::plus || keyval == gdk::enums::key::KP_Add {
+	        // Zoom in
+            let mouse_wpos = *self.prev_motion_wpos.borrow();
+            self.mouse_wheel_op_queue.borrow_mut().push_back((1, mouse_wpos));
+	    } else if keyval == gdk::enums::key::minus || keyval == gdk::enums::key::KP_Subtract {
+	        // Zoom out
+            let mouse_wpos = *self.prev_motion_wpos.borrow();
+            self.mouse_wheel_op_queue.borrow_mut().push_back((-1, mouse_wpos));
+        } else if keyval == gdk::enums::key::Tab {
+            // Cycle between two maps
+            if let Some(ref map_win) = self.map_win {
+                let mut view = map_win.map_view.borrow_mut();
+                
+                // Swap the current map and the previous one
+                let t = view.map_slug.clone();
+                view.map_slug = view.prev_map_slug.clone().unwrap_or(t.clone());
+                view.prev_map_slug = Some(t);
+            
+                // Update map canvas with the selected map
+                map_win.update_map();
+            }
+        } else if keyval == gdk::enums::key::KP_Left {
+            // TODO
+	    } else {
+	        // Map canvas doesn't process this key event
+            return false
+        }
+        
+        // Trigger op queue handling
+        if *self.mode.borrow() == MapCanvasMode::Void {
+            self.on_void_state();
+        }
+        true
+    }
+
     /// Event handler for mouse button press. Either start dragging a map element or scrolling the 
     /// map. This doesn't select map element (to avoid accidental drag instead of scroll).
     fn button_press_event(&self, ev: &gdk::EventButton) {
@@ -760,6 +808,9 @@ impl MapCanvas {
                                 *update_map.borrow_mut() = true;
                             }
                         } }) ;
+                        
+                    // Save the position for a possible key event
+                    *self.prev_motion_wpos.borrow_mut() = pos;
                 },
                 MapCanvasMode::Moving => {
                 }

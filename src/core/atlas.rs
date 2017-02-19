@@ -415,6 +415,10 @@ pub struct MapView {
     
     /// Window width and height in pixels.
     pub window_size: Option<(i32, i32)>,
+    
+    /// Previous map slub (needed for tab cycling).
+    #[serde(default)]
+    pub prev_map_slug: Option<String>,
 }
 
 impl MapView {
@@ -428,6 +432,7 @@ impl MapView {
             coordinates_format: "dm".into(),
             window_position: None,
             window_size: None,
+            prev_map_slug: None,
         }
     }
     

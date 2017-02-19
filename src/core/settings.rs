@@ -290,7 +290,11 @@ impl Settings {
                                 error!("Unrecognized http proxy scheme: {}", url.scheme());
                             }
                         }
+                    } else {
+                        warn!("No port found in proxy url: {}", url.to_string());
                     }
+                } else {
+                    warn!("No host found in proxy url: {}", url.to_string());
                 }
             }
             

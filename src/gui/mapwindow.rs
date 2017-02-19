@@ -252,6 +252,7 @@ impl MapWindow {
                                 // Change map id on the view
                                 {
                                     let mut view = self_rc.map_view.borrow_mut();
+                                    view.prev_map_slug = Some(view.map_slug.clone());
                                     view.map_slug = map_slug.to_string();
                                     
                                     // We don't want to focus on the lower left corner on redraw.
@@ -266,6 +267,9 @@ impl MapWindow {
                                 }
                             }
                         }
+                        
+                        // Ensure that map canvas gets focus after this one
+                        self_rc.focus_map_canvas();
                     });
                 }
                 win.add_action(&action);
@@ -360,6 +364,9 @@ impl MapWindow {
                                 self_rc.update_map();
                             }
                         }
+                                
+                        // Ensure that map canvas gets focus after this one
+                        self_rc.focus_map_canvas();
                     });
                 }
                 win.add_action(&action);
@@ -424,6 +431,9 @@ impl MapWindow {
                                 self_rc.update_coordinates_button(focus, None); // TODO: accuracy
                             }
                         }
+                        
+                        // Ensure that map canvas gets focus after this one
+                        self_rc.focus_map_canvas();
                     });
                 }
                 win.add_action(&action);
@@ -519,6 +529,15 @@ impl MapWindow {
         } else {
             warn!("No canvas, no queue_draw");
         }
+    }
+    
+    /// Focus map canvas.
+    pub fn focus_map_canvas(&self) {
+        if let Some(ref canvas) = self.map_canvas.borrow().widget {
+            if !canvas.has_focus() {
+                canvas.grab_focus();
+            }
+        }   
     }
 }
 
