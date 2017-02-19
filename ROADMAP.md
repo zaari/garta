@@ -1,5 +1,5 @@
 # Garta Roadmap
-This is an open-ended development roadmap for Garta. See the [change log] for more information about the current state.
+This is an open-ended development roadmap for Garta and subject to change any time. See the [change log] for more information about the past changes.
 
 ## Version 0.2
 - GPX loading **[50%]**
@@ -12,12 +12,12 @@ This is an open-ended development roadmap for Garta. See the [change log] for mo
 - units of measurement (nautical, metric, imperial) **[100%]**
 - vehicles **[80%]**
 - full data persistence **[50%]**
-- https support **[80%]**
-- MapCanvas::draw refactored (for better modularity, maintainability, readability and simplicity)
+- https support **[100%]**
+- MapCanvas::draw refactored (for better modularity and maintainability)
 
 ## Version 0.3
-- track editing
 - route planning
+- track editing
 - waypoints
 - GPX saving
 - coordinates module relicensed and moved to a separate repository and also published at crates.io
@@ -56,14 +56,17 @@ This is an open-ended development roadmap for Garta. See the [change log] for mo
 - GeoRSS, GeoJSON, GeoURI and GeoTagging
 - collaborative layers editing
 - vector tile maps
+- SVG export
 - integration with sports web services
+- option for globe-wide offline maps
 
 ## Non-Goals
 - OpenStreetMap data editing (there is [JOSM] for that)
-- street-based routing ([Google Maps], [Gnome Maps] and especially numerous smartphone apps do that pretty well – or if you are concerned about your privacy the traditional paper maps still exist)
+- street-based routing ([Google Maps], [Gnome Maps] and especially numerous smartphone apps do that pretty well – or if you are concerned about your [privacy] the traditional paper maps still exist)
 
 [change log]: CHANGELOG.md
 [JOSM]: https://josm.openstreetmap.de
 [Google Maps]: http://maps.google.com
 [Gnome Maps]: https://wiki.gnome.org/Apps/Maps 
+[privacy]: https://www.privacytools.io/
 

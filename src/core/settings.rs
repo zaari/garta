@@ -27,7 +27,7 @@ use std::env;
 use std::path;
 use self::hyper::client::{Client, ProxyConfig};
 use self::hyper::{Url};
-use self::hyper::net::{HttpsConnector};
+use self::hyper::net::{HttpConnector, HttpsConnector};
 use self::hyper_rustls::{TlsClient};
 use core::units::{Units};
 use core::persistence::{serialize_option_url, deserialize_option_url};
@@ -272,19 +272,29 @@ impl Settings {
         // Either https or http client
         if https {
             // Create an HTTPS client
-            let ssl = TlsClient::new();
-            let connector = HttpsConnector::new(ssl);
-/*            
+            let tls = TlsClient::new();
             if let Some(ref url) = https_proxy_url {
                 if let Some(ref host) = url.host_str() {
                     if let Some(ref port) = url.port_or_known_default() {
-                        let pc = ProxyConfig::new(
-                            url.scheme(), *host, *port, connector, ssl); // TODO: scheme
-                        return Client::with_proxy_config(pc);
+                        match url.scheme() {
+                            "http" => {
+                                let connector = HttpConnector::default();
+                                let pc = ProxyConfig::new(
+                                    "http", host.to_string(), *port, connector, tls);
+                                return Client::with_proxy_config(pc);
+                            },
+                            "https" => {
+                                error!("Http proxy scheme http not supported!");
+                            },
+                            _ => {
+                                error!("Unrecognized http proxy scheme: {}", url.scheme());
+                            }
+                        }
                     }
                 }
             }
-*/            
+            
+            let connector = HttpsConnector::new(tls);
             Client::with_connector(connector)
         } else {
             // Create an HTTP client
