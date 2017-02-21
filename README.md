@@ -39,7 +39,7 @@ cargo build --release && ./target/release/garta
 ```
 
 ## Building and installing
-Garta has a simple configure and install scripts.
+Garta has a simple configure and install scripts. The install script recognises DESTDIR environment variable if set.
 
 ```bash
 ./configure.sh --prefix /usr/local

@@ -7,7 +7,7 @@
 
 # Defaults for a local install
 PREFIX="."
-BIN_PREFIX="./target/release"
+EXEC_PREFIX="./target/release"
 SHARE_PREFIX=`pwd`
 DATA_PREFIX=`pwd`
 
@@ -21,18 +21,22 @@ do
             # Installation prefix
             PREFIX="$2"
             if [ "$PREFIX" != "." ] ; then
-                BIN_PREFIX="$2/bin"
+                EXEC_PREFIX="$2/bin"
                 SHARE_PREFIX="$2/share"
                 DATA_PREFIX="$2/share/garta"
             fi
             shift
             ;;
+        --exec-prefix)
+            EXEC_PREFIX="$PREFIX/bin"
+            shift
+            ;;
         *)
             echo "./configure.sh [options]"
             echo ""
-            echo "Available option"
-            echo ""
-            echo "    -prefix <dir> ... The deployment directory, default /usr/local"
+            echo "Available options:"
+            echo "    --prefix <dir>       The deployment directory [/usr/local]"
+            echo "    --exec-prefix <dir>  The deployment directory [$PREFIX/bin]"
             echo ""
             exit 1
             ;;
@@ -64,34 +68,44 @@ cat > $INSTALL_FILENAME << EOF
 #!/bin/bash
 set -e
 
-if [ ! -d "$BIN_PREFIX" ] ; then 
-    mkdir -p $BIN_PREFIX
+umask 0022
+
+if [ "\$DESTDIR" != ""  ] ; then
+    if [ ! -d "\$DESTDIR" ] ; then 
+        echo "\$DESTDIR must exist" &>/dev/stderr
+        exit 1
+    fi
+    DESTDIR="\$DESTDIR/"
 fi
 
-cp -p target/release/garta $BIN_PREFIX/
-chown $USER:$GROUP $BIN_PREFIX/garta
-
-if [ ! -d "$SHARE_PREFIX/applications/" ] ; then 
-    mkdir -p $SHARE_PREFIX/applications/
+if [ ! -d "\$DESTDIR$EXEC_PREFIX" ] ; then 
+    mkdir -p \$DESTDIR$EXEC_PREFIX
 fi
-cp -p $DESKTOP_FILENAME $SHARE_PREFIX/applications/
-chown $USER:$GROUP $SHARE_PREFIX/applications/$DESKTOP_FILENAME
 
-if [ ! -d "$SHARE_PREFIX/icons/hicolor/scalable/apps/" ] ; then 
-    mkdir -p $SHARE_PREFIX/icons/hicolor/scalable/apps/
-fi
-cp -p icons/garta.svg $PREFIX/share/icons/hicolor/scalable/apps/
-chown $USER:$GROUP $PREFIX/share/icons/hicolor/scalable/apps/garta.svg
+cp -p target/release/garta \$DESTDIR$EXEC_PREFIX/
+chown $USER:$GROUP \$DESTDIR$EXEC_PREFIX/garta
 
-if [ ! -d "$DATA_PREFIX" ] ; then 
-    mkdir -p $DATA_PREFIX
-    mkdir -p $DATA_PREFIX/ui
-    mkdir -p $DATA_PREFIX/maps
+if [ ! -d "\$DESTDIR$SHARE_PREFIX/applications/" ] ; then 
+    mkdir -p \$DESTDIR$SHARE_PREFIX/applications/
 fi
-cp -pR maps/* $DATA_PREFIX/maps/
-chown -R $USER:$GROUP $DATA_PREFIX/maps/*
-cp -pR ui/* $DATA_PREFIX/ui/
-chown -R $USER:$GROUP $DATA_PREFIX/ui/*
+cp -p $DESKTOP_FILENAME \$DESTDIR$SHARE_PREFIX/applications/
+chown $USER:$GROUP \$DESTDIR$SHARE_PREFIX/applications/$DESKTOP_FILENAME
+
+if [ ! -d "\$DESTDIR$SHARE_PREFIX/icons/hicolor/scalable/apps/" ] ; then 
+    mkdir -p \$DESTDIR$SHARE_PREFIX/icons/hicolor/scalable/apps/
+fi
+cp -p icons/garta.svg \$DESTDIR$PREFIX/share/icons/hicolor/scalable/apps/
+chown $USER:$GROUP \$DESTDIR$PREFIX/share/icons/hicolor/scalable/apps/garta.svg
+
+if [ ! -d "\$DESTDIR$DATA_PREFIX" ] ; then 
+    mkdir -p \$DESTDIR$DATA_PREFIX
+    mkdir -p \$DESTDIR$DATA_PREFIX/ui
+    mkdir -p \$DESTDIR$DATA_PREFIX/maps
+fi
+cp -pR maps/* \$DESTDIR$DATA_PREFIX/maps/
+chown -R $USER:$GROUP \$DESTDIR$DATA_PREFIX/maps/*
+cp -pR ui/* \$DESTDIR$DATA_PREFIX/ui/
+chown -R $USER:$GROUP \$DESTDIR$DATA_PREFIX/ui/*
 EOF
 else
 cat > $INSTALL_FILENAME << EOF
@@ -113,10 +127,14 @@ if [ "$PREFIX" != "." ] ; then
 cat > $UNINSTALL_FILENAME << EOF
 #!/bin/bash
 
-rm -f $BIN_PREFIX/garta
-rm -f $SHARE_PREFIX/applications/com.github.zaari.garta.desktop
-rm -f $SHARE_PREFIX/icons/hicolor/scalable/apps/garta.svg
-rm -fR $DATA_PREFIX
+if [ "\$DESTDIR" != ""  ] ; then
+    DESTDIR="\$DESTDIR/"
+fi
+
+rm -f \$DESTDIR$EXEC_PREFIX/garta
+rm -f \$DESTDIR$SHARE_PREFIX/applications/com.github.zaari.garta.desktop
+rm -f \$DESTDIR$SHARE_PREFIX/icons/hicolor/scalable/apps/garta.svg
+rm -fR \$DESTDIR$DATA_PREFIX
 
 EOF
 else
@@ -132,7 +150,7 @@ echo "Created file $UNINSTALL_FILENAME"
 # -------------------------------------------------------------------------------------------------
 if [ "$PREFIX" != "." ] ; then
     ICON_FILE=$SHARE_PREFIX/icons/hicolor/scalable/apps/garta.svg
-    EXECUTABLE=$BIN_PREFIX/garta
+    EXECUTABLE=$EXEC_PREFIX/garta
 else
     ICON_FILE=`pwd`/icons/garta.svg
     EXECUTABLE=`pwd`/target/release/garta

@@ -27,6 +27,8 @@ script:
   - ./configure.sh --prefix /usr/local
   - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
+  - export DESTDIR=/tmp/garta-pkg
+  - mkdir $DESTDIR
   - ./install.sh
   - ./uninstall.sh
 
