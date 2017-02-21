@@ -20,7 +20,7 @@ lazy_static = "0.2"
 regex       = "0.2"
 rand        = "0.3"
 num_cpus    = "1.2"
-xml-rs      = "0.3"
+xml-rs      = "=0.3.6" # TODO: 0.3
 assert      = "0.7"
 #gettext-rs  = "*"
 

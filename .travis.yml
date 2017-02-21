@@ -24,7 +24,7 @@ script:
   - tar -xf deps.txz
   - cd "$WD"
   - export PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig"
-  - ./configure.sh --prefix .
+  - ./configure.sh --prefix /usr/local
   - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
   - ./install.sh
