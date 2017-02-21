@@ -8,7 +8,7 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - layers dialog
 - transparent map layers
 - zooming with keyboard **[100%]**
-- application icon and sample .desktop file **[100%]**
+- application icon and .desktop file **[100%]**
 - units of measurement (nautical, metric, imperial) **[100%]**
 - vehicles **[80%]**
 - full data persistence **[50%]**

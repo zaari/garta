@@ -22,7 +22,7 @@ git clone https://github.com/zaari/garta
 cd garta
 ```
 
-## Building
+## Testing
 If you want to get some debug from garta internals, you can configure the env_logger. The following enables warnings in any Rust module and info messages in any Garta module, but then allows debug level messages from wanted parts.
 
 ```bash
@@ -38,7 +38,7 @@ cargo run
 cargo build --release && ./target/release/garta
 ```
 
-## Installing
+## Building and installing
 There are simple configure and install scripts for Garta.
 
 ```bash

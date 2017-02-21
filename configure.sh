@@ -14,10 +14,12 @@ do
 
     case $key in
         -p|--prefix)
-            PREFIX="$2"
-            BIN_PREFIX="$2/bin"
-            SHARE_PREFIX="$2/share"
-            DATA_PREFIX="$2/share/garta"
+            if [ "$PREFIX" != "." ] ; then
+                PREFIX="$2"
+                BIN_PREFIX="$2/bin"
+                SHARE_PREFIX="$2/share"
+                DATA_PREFIX="$2/share/garta"
+            fi
             shift
         ;;
         *)

@@ -27,6 +27,8 @@ script:
   - ./configure.sh --prefix .
   - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
+  - ./install.sh
+  - ./uninstall.sh
 
 notifications:
   email: true
