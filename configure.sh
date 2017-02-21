@@ -1,36 +1,41 @@
 #!/bin/sh
 
 #
-# This is a simple configure script for Garta.
+# This is a simple configure script which generates files for a freedesktop.org 
+# compatible desktop environment.
 #
 
+# Defaults for a local install
 PREFIX="."
 BIN_PREFIX="./target/release"
 SHARE_PREFIX=`pwd`
 DATA_PREFIX=`pwd`
-while [[ $# -gt 1 ]]
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]
 do
     key="$1"
 
     case $key in
-        -p|--prefix)
+        --prefix)
+            # Installation prefix
+            PREFIX="$2"
             if [ "$PREFIX" != "." ] ; then
-                PREFIX="$2"
                 BIN_PREFIX="$2/bin"
                 SHARE_PREFIX="$2/share"
                 DATA_PREFIX="$2/share/garta"
             fi
             shift
-        ;;
+            ;;
         *)
-            # Unknown option
             echo "./configure.sh [options]"
             echo ""
-            echo "Available options"
+            echo "Available option"
             echo ""
             echo "    -prefix <dir> ... The deployment directory, default /usr/local"
+            echo ""
             exit 1
-        ;;
+            ;;
     esac
     shift
 done
