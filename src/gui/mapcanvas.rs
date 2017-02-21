@@ -302,7 +302,7 @@ impl MapCanvas {
             
             // Default background color
             let background_color = (0.2f64, 0.2f64, 0.2f64);
-        /* TODO: get_background_color is not available on API yet    
+        /* TODO: get_background_color is not available on gtk-rs API yet    
             if let Some(style_context) = widget.get_style_context() {
                 style_context.get_background_color(gtk::StateFlags::STATE_FLAG_NORMAL);
             }

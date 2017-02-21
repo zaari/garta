@@ -8,12 +8,13 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - layers dialog
 - transparent map layers
 - zooming with keyboard **[100%]**
-- application icon and sample .desktop file **[90%]**
+- application icon and sample .desktop file **[100%]**
 - units of measurement (nautical, metric, imperial) **[100%]**
 - vehicles **[80%]**
 - full data persistence **[50%]**
 - https support **[100%]**
 - MapCanvas::draw refactored (for better modularity and maintainability)
+- installer script **[100%]**
 
 ## Version 0.3
 - route planning
@@ -26,7 +27,6 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - attractions (a.k.a. geo bookmarks) **[10%]**
 - drag & drop
 - man page
-- installer and packaging
 
 ## Version 0.5
 - internationalization, gettext (contributors needed)

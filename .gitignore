@@ -1,6 +1,7 @@
 # Ignore all scripts except build-loop.sh
 *.sh
 !build-loop.sh
+!configure.sh
 
 # Ignore all maps except osm and mapbox ones
 maps/*
@@ -9,10 +10,10 @@ maps/*
 !maps/opentopomap.json
 
 # Misc files and dirs
+src/core/_config.rs
 Cargo.lock
 TODO.md
 *.desktop
-icons/*
 
 # Build directory
 target/*

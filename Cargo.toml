@@ -24,9 +24,9 @@ xml-rs      = "0.3"
 assert      = "0.7"
 #gettext-rs  = "*"
 
-serde       = "0.9"
-serde_derive= "0.9"
-serde_json  = "0.9"
+serde       = "0.9.7"
+serde_derive= "0.9.7"
+serde_json  = "0.9.7"
 
 glib        = "^0.1.1"
 gdk         = "^0.5.1"

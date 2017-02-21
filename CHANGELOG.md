@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog] and this project adheres to [Semantic 
 - zoom in/out with keyboard
 - https support ([hyper-rustls])
 - passing command line arguments to GTK 
+- application icon file
+- configure, install and uninstall scripts
 
 ## [0.1] - 2017-02-08
 ### Added

@@ -31,6 +31,7 @@ use self::hyper::net::{HttpConnector, HttpsConnector};
 use self::hyper_rustls::{TlsClient};
 use core::units::{Units};
 use core::persistence::{serialize_option_url, deserialize_option_url};
+use core::_config::{DATA_PREFIX};
 
 /// Default number of days until tiles expire if the server doesn't send expiration information.
 pub static DEFAULT_TILE_EXPIRE_DAYS: i64 = 7;
@@ -68,9 +69,6 @@ pub struct Settings {
     /// The default units of the app. If vehicle has units defined those override this setting.
     pub units: Units,
 
-    // Per host data directory for the atlas
-    host_data_directory: String,
-    
     // Per user data directory for the atlas
     user_data_directory: String,
     
@@ -121,7 +119,6 @@ impl Settings {
     fn new() -> Settings {
         Settings {
             units: Units::Nautical,
-            host_data_directory: ".".to_string(), // TODO: "/usr/local/share/garta".to_string(),
             user_data_directory: "~/.local/share/garta".to_string(),
             config_directory: "~/.config/garta".to_string(),
             cache_directory: "~/.cache/garta".to_string(),
@@ -146,16 +143,18 @@ impl Settings {
 
     /// Get ui files directory
     pub fn ui_directory_for(&self, filename: &'static str) -> path::PathBuf { 
-        let mut pb = string_to_path(&self.host_data_directory); 
-        pb.push("ui"); // TODO: test if a ui directory exists at current working directory
+        let root_path = DATA_PREFIX.to_string();
+        let mut pb = string_to_path(&root_path); 
+        pb.push("ui");
         pb.push(filename);
         pb 
     }
 
     /// Return a list of directories where to try load map json files.    
     pub fn map_directories(&self) -> Vec<path::PathBuf> {
+        let root_path = DATA_PREFIX.to_string();
         vec![
-            { let mut pb = string_to_path(&self.host_data_directory); pb.push("maps"); pb  },
+            { let mut pb = string_to_path(&root_path); pb.push("maps"); pb  },
             { self.user_maps_directory() },
             { let mut pb = path::PathBuf::from("."); pb.push("maps"); pb },
         ]
@@ -163,8 +162,9 @@ impl Settings {
     
     /// Return a list of directories where to try load token json files.    
     pub fn token_directories(&self) -> Vec<path::PathBuf> {
+        let root_path = DATA_PREFIX.to_string();
         vec![
-            { let mut pb = string_to_path(&self.host_data_directory); pb.push("maps"); pb.push("tokens"); pb  },
+            { let mut pb = string_to_path(&root_path); pb.push("maps"); pb.push("tokens"); pb  },
             { self.user_tokens_directory() },
             { let mut pb = path::PathBuf::from("."); pb.push("maps"); pb.push("tokens"); pb },
         ]
