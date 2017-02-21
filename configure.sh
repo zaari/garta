@@ -98,6 +98,9 @@ cat > $INSTALL_FILENAME << EOF
 #!/bin/bash
 set -e
 
+if [ ! -d "$HOME/.local/share/applications" ] ; then 
+    mkdir -p $HOME/.local/share/applications
+fi
 cp -p $DESKTOP_FILENAME $HOME/.local/share/applications/
 EOF
 fi
