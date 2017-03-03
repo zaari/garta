@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # This is a simple configure script which generates files for a freedesktop.org 
@@ -159,8 +159,7 @@ cat > $DESKTOP_FILENAME << EOF
 [Desktop Entry]
 Type=Application
 Categories=GTK;Education;Geography
-Keywords=Maps;GPX;Geography;Track;Route;
-#MimeType=application/gpx+xml;application/xml
+Keywords=map;geography;track;GPX;GPS;
 Encoding=UTF-8
 Name=Garta
 Version=$VERSION
@@ -169,5 +168,7 @@ Exec=$EXECUTABLE
 Icon=$ICON_FILE
 Terminal=false
 EOF
+#Keywords=map;geography;track;route;waypoint;GPX;GPS;
+#MimeType=application/gpx+xml;application/xml
 echo "Created file $DESKTOP_FILENAME"
 
