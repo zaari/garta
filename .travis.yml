@@ -27,7 +27,7 @@ script:
   - ./configure.sh --prefix /usr/local
   - cargo test --features "$FEATURES"
   - cargo build --release --features "$FEATURES"
-  - sudo /install.sh
+  - sudo ./install.sh
   - sudo ./uninstall.sh
 
 notifications:
