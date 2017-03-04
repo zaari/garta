@@ -25,10 +25,8 @@ script:
   - cd "$WD"
   - export PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig"
   - ./configure.sh --prefix /usr/local
-  - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
-  - export DESTDIR=/tmp/garta-pkg
-  - mkdir $DESTDIR
+  - cargo build --release --features "$FEATURES"
   - ./install.sh
   - ./uninstall.sh
 
