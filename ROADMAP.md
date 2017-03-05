@@ -1,20 +1,20 @@
 # Garta Roadmap
-This is an open-ended development roadmap for Garta and subject to change any time. See the [change log] for more information about the past changes.
+This is an open-ended development roadmap for Garta and subject to change any time. Any feature following the closest upcoming release shouldn't be considered as certain. See the [change log] for more information about the past changes.
 
 ## Version 0.2
-- GPX loading **[50%]**
+- GPX loading **[40%]**
 - track rendering
 - track statistics
 - layers dialog
 - transparent map layers
 - zooming with keyboard **[100%]**
-- application icon and .desktop file **[100%]**
 - units of measurement (nautical, metric, imperial) **[100%]**
 - vehicles **[80%]**
-- full data persistence **[50%]**
+- full data persistence **[40%]**
 - https support **[100%]**
-- MapCanvas::draw refactored (for better modularity and maintainability)
-- installer script **[100%]**
+- application icon and .desktop file **[100%]**
+- configure, installer and unstaller scripts **[100%]**
+- MapCanvas::draw refactored (for better modularity and maintainability) **[60% - uncommitted]**
 
 ## Version 0.3
 - route planning
@@ -39,12 +39,17 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - vehicles dialog
 - track replay
 - fullscreen mode
-- sunrise/sunset awareness
 
 ## Version 0.8
+- sunrise/sunset awareness
+
+## Version 0.9
 - locations search by name, and other possible meta queries
 - settings dialog
 - settings persistence **[20%]**
+
+## Version 0.10
+- GUI tweaking for non-GNOME desktop environments (Xfce, Pantheon, etc.)
 
 ## Version 1.0
 - stable file formats and directory structure
@@ -56,9 +61,10 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - GeoRSS, GeoJSON, GeoURI and GeoTagging
 - collaborative layers editing
 - vector tile maps
-- SVG export
+- SVG and PNG export
+- printing support
 - integration with sports web services
-- option for globe-wide offline maps
+- globe-wide offline maps
 
 ## Non-Goals
 - OpenStreetMap data editing (there is [JOSM] for that)
@@ -69,4 +75,5 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 [Google Maps]: http://maps.google.com
 [Gnome Maps]: https://wiki.gnome.org/Apps/Maps 
 [privacy]: https://www.privacytools.io/
+[Redox OS]: https://www.redox-os.org/
 

@@ -28,13 +28,13 @@ serde       = "0.9.7"
 serde_derive= "0.9.7"
 serde_json  = "0.9.7"
 
-glib        = "^0.1.1"
-gdk         = "^0.5.1"
-gdk-sys     = "^0.3.2"
-gdk-pixbuf  = "^0.1.1"
-gtk         = "^0.1.1"
-gio         = "^0.1.1"
-cairo-rs    = "^0.1.1"
+glib        = "^0.1.2"
+gdk         = "^0.5.2"
+gdk-sys     = "^0.3.3"
+gdk-pixbuf  = "^0.1.2"
+gtk         = "^0.1.2"
+gio         = "^0.1.2"
+cairo-rs    = "^0.1.2"
 
 [features]
 default = ["gtk/v3_16"]

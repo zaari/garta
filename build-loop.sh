@@ -14,7 +14,7 @@ find src -name "*.rs" | xargs wc -l
 export CARGO_INCREMENTAL=1
 
 # Configure for testing
-./configure.sh --prefix .
+./configure.sh --prefix . >/dev/null
 
 # The initial build
 cargo test
