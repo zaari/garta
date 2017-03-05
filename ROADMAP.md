@@ -49,11 +49,12 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - settings persistence **[20%]**
 
 ## Version 0.10
-- GUI tweaking for non-GNOME desktop environments (Xfce, Pantheon, etc.)
+- GUI tweaking for non-GNOME desktop environments (Xfce, Pantheon, Unity, etc.)
+- ensure that build works on important Linux distros (Ubuntu, Debian, OpenSUSE, Fedora, Arch, Qubes OS)
+- polished error handling and code in general
 
 ## Version 1.0
 - stable file formats and directory structure
-- polished error handling and code in general
 - debugging removed from stable parts of the code
 
 ## Post-1.0
