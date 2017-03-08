@@ -81,7 +81,7 @@ impl MapWindowWidgets {
 }
 
 impl MapWindow {
-    pub fn new_rc(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tile_cache: Rc<RefCell<TileCache>>) -> Rc<MapWindow> {
+    pub fn new_r(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tile_cache: Rc<RefCell<TileCache>>) -> Rc<MapWindow> {
         Rc::new(MapWindow {
             atlas: atlas,
             map_canvas: RefCell::new(MapCanvas::new()),
