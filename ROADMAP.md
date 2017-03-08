@@ -14,7 +14,7 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - https support **[100%]**
 - application icon and .desktop file **[100%]**
 - configure, installer and unstaller scripts **[100%]**
-- MapCanvas::draw refactored (for better modularity and maintainability) **[60% - uncommitted]**
+- MapCanvas::draw refactored (for better modularity and maintainability) **[80% - uncommitted]**
 
 ## Version 0.3
 - route planning
@@ -49,8 +49,8 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - settings persistence **[20%]**
 
 ## Version 0.10
-- GUI tweaking for non-GNOME desktop environments (Xfce, Pantheon, Unity, etc.)
-- ensure that build works on important Linux distros (Ubuntu, Debian, OpenSUSE, Fedora, Arch, Qubes OS)
+- ensure that the works smoothly on non-[GNOME] desktop environments, like [Xfce], [Pantheon], [Unity], [Cinnamon] and [Qubes OS]
+- firejail profile
 - polished error handling and code in general
 
 ## Version 1.0
@@ -76,5 +76,11 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 [Google Maps]: http://maps.google.com
 [Gnome Maps]: https://wiki.gnome.org/Apps/Maps 
 [privacy]: https://www.privacytools.io/
-[Redox OS]: https://www.redox-os.org/
+
+[GNOME]: https://www.gnome.org/
+[Xfce]: https://www.xfce.org/
+[Pantheon]: https://wiki.archlinux.org/index.php/Pantheon
+[Unity]: https://unity.ubuntu.com/
+[Cinnamon]: https://en.wikipedia.org/wiki/Cinnamon_(software)
+[Qubes OS]: https://www.qubes-os.org/
 

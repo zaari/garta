@@ -27,7 +27,8 @@ that are used to render the map.
 
 In the future it may be worth evaluating the option to use asynchronous crates (futures-rs, 
 async hyper), to make this module more efficient and elegant. It may be better to wait for 
-the crates to reach a stable version first, though.
+the crates to reach a stable version first, though, and there are many higher priority things 
+to do first.
 
 
 TILE LOADING SEQUENCE DIAGRAM

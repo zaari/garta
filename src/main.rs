@@ -16,7 +16,7 @@
 
 #![allow(dead_code)]
 #![allow(unused_variables)]
-#![allow(unused_assignments)] // ...to avoid false warnings (should make a bug report about this)
+#![allow(unused_assignments)] // ...to avoid false warnings (I should file a bug report about this)
 
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate lazy_static;
@@ -52,7 +52,7 @@ fn main() {
     // Initialize tile cache
     let tcache_time0 = Instant::now();
     info!("Initializing tile cache");
-    let tcache_rrc = create_tile_cache();
+    let tcache_rc = create_tile_cache();
     debug!("Cache initialized in {:.3} seconds", duration_to_seconds(&tcache_time0.elapsed()));
 
     // Create atlas
@@ -98,7 +98,7 @@ fn main() {
         let l3 = Layer::new("Layer 3".into(), 3); atlas.borrow_mut().layers.insert(l3.id(), l3);
     }
 
-    // Load atlas...
+    // TODO: Load atlas...
 
     // Load map view
     let map_view = RefCell::new(MapView::restore());
@@ -106,20 +106,21 @@ fn main() {
         map_view.borrow_mut().map_slug = "osm-carto".into(); // TODO: better validation
     }
 
-    // Create GUI and start GTK main
+    // Create GUI and run GTK main
     info!("Run {} with GUI", APP_NAME);
-    match gui::run_app(atlas, map_view, tcache_rrc.clone()) {
-        Ok(map_win) => {
-            // Save map view
-            map_win.map_view.borrow().store();
+    match gui::run_app(atlas, map_view, tcache_rc.clone()) {
+        Ok(map_win_r) => {
+            // Persist map view state
+            map_win_r.map_view.borrow().store();
         },
         Err(e) => {
             error!("Failed to run the app: {}", e);
+            exit(1);
         }
     }
 
     // Persist tile cache state
-    tcache_rrc.borrow_mut().store();
+    tcache_rc.borrow_mut().store();
     debug!("Exit");
 }
 

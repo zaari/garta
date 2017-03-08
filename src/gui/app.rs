@@ -28,20 +28,20 @@ use core::tiles::{TileCache};
 use core::settings::{APP_ID};
 use gui::mapwindow::{MapWindow};
 
-/// Run the GTK application.
+/// Run GTK application.
 pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc<RefCell<TileCache>>) -> Result<Rc<MapWindow>, String> {
     // Create map window and set it as tile cache observer
-    let map_win_r = MapWindow::new_rc(atlas, map_view, tcache_rrc.clone());
+    let map_win_r = MapWindow::new_r(atlas, map_view, tcache_rrc.clone());
     tcache_rrc.borrow_mut().observer = Some(map_win_r.clone());
 
     // Create and run GTK app
     let app = match gtk::Application::new(Some(APP_ID), gio::APPLICATION_FLAGS_NONE) {
         Ok(app) => {
-            // Handle 'active' signal sent by run method
-            let self_r = map_win_r.clone();
+            // Handle 'active' signal sent by gtk::Application::run method
+            let map_win_r = map_win_r.clone();
             app.connect_activate(move |app| {
-                // Create GUI
-                match self_r.init(self_r.clone(), app) {
+                // Call MapWindow::init where the GUI is created
+                match map_win_r.init(map_win_r.clone(), app) {
                     Ok(()) => {
                     },
                     Err(e) => {
@@ -50,7 +50,7 @@ pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc
                 }
             });
 
-            // Run the app with command line args
+            // Run GTK application with command line args
             let args: Vec<String> = env::args().collect();
             let argv: Vec<&str> = args.iter().map(|x| x.as_str()).collect();
             app.run(argv.len() as i32, argv.as_slice());
