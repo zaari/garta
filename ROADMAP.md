@@ -15,6 +15,7 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - application icon and .desktop file **[100%]**
 - configure, installer and unstaller scripts **[100%]**
 - MapCanvas::draw refactored (for better modularity and maintainability) **[80% - uncommitted]**
+- firejail profile **[100%]**
 
 ## Version 0.3
 - route planning
@@ -49,9 +50,9 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - settings persistence **[20%]**
 
 ## Version 0.10
-- ensure that the works smoothly on non-[GNOME] desktop environments, like [Xfce], [Pantheon], [Unity], [Cinnamon] and [Qubes OS]
-- firejail profile
+- ensure that the works smoothly in some important desktop environments, like [GNOME], [Xfce], [Unity], [Pantheon], [Cinnamon] and [Qubes OS]
 - polished error handling and code in general
+- code security hardening
 
 ## Version 1.0
 - stable file formats and directory structure

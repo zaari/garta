@@ -29,10 +29,10 @@ use core::settings::{APP_ID};
 use gui::mapwindow::{MapWindow};
 
 /// Run GTK application.
-pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc<RefCell<TileCache>>) -> Result<Rc<MapWindow>, String> {
-    // Create map window and set it as tile cache observer
-    let map_win_r = MapWindow::new_r(atlas, map_view, tcache_rrc.clone());
-    tcache_rrc.borrow_mut().observer = Some(map_win_r.clone());
+pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rc: Rc<RefCell<TileCache>>) -> Result<Rc<MapWindow>, String> {
+    // Create map window and set it as a tile cache observer
+    let map_win_r = MapWindow::new_r(atlas, map_view, tcache_rc.clone());
+    tcache_rc.borrow_mut().observer = Some(map_win_r.clone());
 
     // Create and run GTK app
     let app = match gtk::Application::new(Some(APP_ID), gio::APPLICATION_FLAGS_NONE) {
@@ -40,7 +40,7 @@ pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc
             // Handle 'active' signal sent by gtk::Application::run method
             let map_win_r = map_win_r.clone();
             app.connect_activate(move |app| {
-                // Call MapWindow::init where the GUI is created
+                // Call MapWindow::init function which creates the user interface
                 match map_win_r.init(map_win_r.clone(), app) {
                     Ok(()) => {
                     },
@@ -59,8 +59,7 @@ pub fn run_app(atlas: RefCell<Atlas>, map_view: RefCell<MapView>, tcache_rrc: Rc
             return Err(format!("Failed to create gtk app: {:?}", e));
         }
     };
-    
+
     Ok(map_win_r)
 }
-
 

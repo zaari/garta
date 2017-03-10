@@ -49,7 +49,8 @@ CONFIG_FILENAME=src/core/_config.rs
 INSTALL_FILENAME=install.sh
 UNINSTALL_FILENAME=uninstall.sh
 DESKTOP_FILENAME=com.github.zaari.garta.desktop
-VERSION=`grep version Cargo.toml | cut -d '=' -f 2 | sed 's/[ \"]//g'`
+FIREJAIL_FILENAME=garta.profile
+APP_VERSION=`grep version Cargo.toml | cut -d '=' -f 2 | sed 's/[ \"]//g'`
 
 # -------------------------------------------------------------------------------------------------
 cat > $CONFIG_FILENAME << EOF
@@ -97,6 +98,12 @@ fi
 cp -p icons/garta.svg \$DESTDIR$PREFIX/share/icons/hicolor/scalable/apps/
 chown $USER:$GROUP \$DESTDIR$PREFIX/share/icons/hicolor/scalable/apps/garta.svg
 
+if [ ! -d "\$DESTDIR/etc/firejail/" ] ; then 
+    mkdir -p \$DESTDIR/etc/firejail/
+fi
+cp -p garta.profile \$DESTDIR/etc/firejail/
+chown $USER:$GROUP \$DESTDIR/etc/firejail/garta.profile
+
 if [ ! -d "\$DESTDIR$DATA_PREFIX" ] ; then 
     mkdir -p \$DESTDIR$DATA_PREFIX
     mkdir -p \$DESTDIR$DATA_PREFIX/ui
@@ -135,6 +142,7 @@ rm -f \$DESTDIR$EXEC_PREFIX/garta
 rm -f \$DESTDIR$SHARE_PREFIX/applications/com.github.zaari.garta.desktop
 rm -f \$DESTDIR$SHARE_PREFIX/icons/hicolor/scalable/apps/garta.svg
 rm -fR \$DESTDIR$DATA_PREFIX
+rm -f \$DESTDIR/etc/firejail/garta.profile
 
 EOF
 else
@@ -148,6 +156,9 @@ chmod u+x $UNINSTALL_FILENAME
 echo "Created file $UNINSTALL_FILENAME"
 
 # -------------------------------------------------------------------------------------------------
+if [ -f /usr/bin/firejail ] && [ "$PREFIX" != "." ] ; then
+    FIREJAIL_COMMAND=/usr/bin/firejail
+fi
 if [ "$PREFIX" != "." ] ; then
     ICON_FILE=$SHARE_PREFIX/icons/hicolor/scalable/apps/garta.svg
     EXECUTABLE=$EXEC_PREFIX/garta
@@ -162,13 +173,51 @@ Categories=GTK;Education;Geography
 Keywords=map;geography;track;GPX;GPS;
 Encoding=UTF-8
 Name=Garta
-Version=$VERSION
+Version=$APP_VERSION
 Comment=Garta GPX viewer
-Exec=$EXECUTABLE
+TryExec=$EXECUTABLE
+Exec=$FIREJAIL_COMMAND $EXECUTABLE
 Icon=$ICON_FILE
 Terminal=false
 EOF
 #Keywords=map;geography;track;route;waypoint;GPX;GPS;
 #MimeType=application/gpx+xml;application/xml
 echo "Created file $DESKTOP_FILENAME"
+
+# -------------------------------------------------------------------------------------------------
+cat > $FIREJAIL_FILENAME << EOF
+# Firejail profile for Garta application
+
+include /etc/firejail/garta.local
+include /etc/firejail/disable-common.inc
+include /etc/firejail/disable-devel.inc
+include /etc/firejail/disable-passwdmgr.inc
+include /etc/firejail/disable-programs.inc
+
+read-only ~/.config/gtk-3.0
+whitelist ~/.config/gtk-3.0
+
+mkdir ~/.config/garta
+whitelist ~/.config/garta
+mkdir ~/.local/share/garta
+whitelist ~/.local/share/garta
+mkdir ~/.cache/garta
+whitelist ~/.cache/garta
+
+name garta
+nosound
+caps.drop all
+netfilter
+nonewprivs
+noroot
+nogroups
+protocol unix,inet,inet6
+seccomp
+shell none
+tracelog
+
+private-dev
+private-tmp
+EOF
+echo "Created file $FIREJAIL_FILENAME"
 
