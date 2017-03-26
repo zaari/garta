@@ -1,6 +1,6 @@
 # Garta &emsp; [![Travis Build Status](https://travis-ci.org/zaari/garta.svg?branch=master)](https://travis-ci.org/zaari/garta) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
-Garta is a geography tool for [GTK+ 3] toolkit (used by e.g. [GNOME 3 desktop environment] on [Linux distributions]) and written in [Rust programming language]. The focus of the application is on track analysis, route planning and destination bookmarking. Since release [0.1] Garta allows you to explore tile-based world maps. GPX loading will be implemented with release [0.2] and saving with release 0.3. More future goals and the current progress can be found on the roadmap.
+Garta is a geography application for [GTK+ 3] toolkit (used by e.g. [GNOME 3 desktop environment] on [Linux distributions]) and written in [Rust programming language]. The focus of the application is on track analysis, route planning and destination bookmarking. Since release [0.1] Garta allows you to explore tile-based world maps. GPX loading will be implemented with release [0.2] and saving with release 0.3. More future goals and the current progress can be found on the roadmap.
 
 * [Roadmap]
 * [Change Log]
@@ -54,9 +54,9 @@ cat uninstall.sh
 ./uninstall.sh
 ```
 ## Security considerations
-Any software interfacing with remote services or processing unaudited data faces security threats. Malicious data can take advantage of a software bug to perform actions undesirable to the computer's owner. Garta and most of its dependencies benefit from Rust's safety features that enhance <em>security by correctness</em>. Still, as security should be more than that external hardening is encouraged, that applies to any application.
+Any software interfacing with remote services or processing unaudited data faces security threats. Malicious data can take advantage of a software bug to perform actions undesirable to the computer's owner. Garta and most of its dependencies benefit from Rust's safety features that enhance <em>security by correctness</em>. Still, as security should be more than that, external hardening is recommended (that applies to any other application too).
 
-If [Firejail] software is installed in the system the configure script generates a firejail profile and modifies the desktop file to run the application in a sandbox. When those are installed and applied Garta process gets partially isolated from rest of the system. Because the application has to be able to read and write user files (e.g. GPX tracks) access in user home directory isn't protected. You can add custom directory blacklist/whitelist rules by editing include files in /etc/firejail (e.g. /etc/firejail/garta.local or /etc/firejail/disable-common.local) to protect your personal data. For more advanced isolation you can consider [Qubes OS].
+If [Firejail] software is installed in the system the configure script generates a firejail profile and modifies the desktop file to run the application in a sandbox. When those files are installed and applied Garta process gets partially isolated from rest of the system. Because the application has to be able to read and write user files (e.g. GPX tracks) access in user home directory isn't protected. You can add custom directory blacklist/whitelist rules by editing include files in /etc/firejail (e.g. /etc/firejail/garta.local or /etc/firejail/disable-common.local) to protect your personal data. For those that need more solid isolation there is [Qubes OS] project.
 
 [GTK+ 3]: http://www.gtk.org/
 [GNOME 3 desktop environment]: https://www.gnome.org/gnome-3/
