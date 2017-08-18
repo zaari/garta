@@ -106,7 +106,7 @@ impl MapWindow {
             let win_o: Option<gtk::ApplicationWindow> = builder.get_object("main_window");
             if let Some(ref win) = win_o {
                 // Set application to this window
-                win.set_application(Some(&app));
+                win.set_application(Some(app));
                 widgets.app = Some(app.clone());
                 
                 // Define window role for Window Manager
@@ -198,7 +198,7 @@ impl MapWindow {
             widgets.layers_button_label = Some(builder.get_object("layers_button_label").unwrap());
             widgets.coordinates_button = Some(builder.get_object("coordinates_button").unwrap());
             
-            // Hide unfinished items
+            // Hide widgets related to future features
             { let b: gtk::MenuButton = builder.get_object("add_button").unwrap(); b.set_visible(false); }
             { let b: gtk::MenuButton = builder.get_object("list_button").unwrap(); b.set_visible(false); }
             { let b: gtk::MenuButton = builder.get_object("menu_button").unwrap(); b.set_visible(false); }
@@ -238,7 +238,7 @@ impl MapWindow {
                 // Simple Action for map menu button
                 let action = gio::SimpleAction::new_stateful(
                                 "choose_map", 
-                                Some(&glib::VariantType::new("s").unwrap()),
+                                Some(glib::VariantTy::new("s").unwrap()),
                                 &backdrop_map_slug.to_string().to_variant()
                                 );
                 {
@@ -408,7 +408,7 @@ impl MapWindow {
                 // Choose coordinates action
                 let action = gio::SimpleAction::new_stateful(
                                 "choose_coordinates", 
-                                Some(&glib::VariantType::new("s").unwrap()),
+                                Some(glib::VariantTy::new("s").unwrap()),
                                 &coordinates_format.to_variant(),
                                 );
                                 

@@ -22,6 +22,7 @@ use std::io::{Read};
 //use std::result;
 use std::option::{Option};
 use std::collections::linked_list::LinkedList;
+use std::collections::HashMap;
 
 use super::model::*;
 use super::super::geo::Location;
@@ -35,6 +36,8 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
                         cdata_to_characters: true,
                         ignore_comments: true,
                         coalesce_characters: true,
+                        extra_entities: HashMap::new(),
+                        ignore_end_of_stream: false,
                     }
                 );
     let mut en_stack: LinkedList<String> = LinkedList::new(); // Element name stack

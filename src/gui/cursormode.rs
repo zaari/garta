@@ -46,11 +46,11 @@ impl CursorKeeper {
             if let Some(display) = gdk::Display::get_default() {
                 // Map mode to cursor type
                 let cursor_type = match new_mode {
-                    CursorMode::Unset     => { gdk_sys::GdkCursorType::Hand1 },
-                    CursorMode::Draggable => { gdk_sys::GdkCursorType::Hand1 },
-                    CursorMode::Dragging  => { gdk_sys::GdkCursorType::Fleur },
-                    CursorMode::Target    => { gdk_sys::GdkCursorType::Crosshair },
-                    CursorMode::Wait      => { gdk_sys::GdkCursorType::Watch },
+                    CursorMode::Unset     => { gdk::CursorType::Hand1 },
+                    CursorMode::Draggable => { gdk::CursorType::Hand1 },
+                    CursorMode::Dragging  => { gdk::CursorType::Fleur },
+                    CursorMode::Target    => { gdk::CursorType::Crosshair },
+                    CursorMode::Wait      => { gdk::CursorType::Watch },
                 };
                 
                 // Get cursor for display

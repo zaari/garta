@@ -26,18 +26,22 @@ use std::rc::{Rc};
 use std::cell::{RefCell};
 use log::LogLevel::Debug;
 use std::time::{Instant, Duration};
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{VecDeque};
+use std::collections::{BTreeSet};
 use std::process;
 use self::gtk::prelude::*;
 
-use gui::mapwindow::{MapWindow};
 use self::chrono::{UTC};
 use core::tiles::*;
 use geocoord::geo::{Vector, Location, Projection};
+use gui::mapwindow::{MapWindow};
 use gui::floatingtext::*;
 use gui::sprite::{Sprite};
 use gui::cursormode::{CursorMode, CursorKeeper};
+//use gui::mapcanvasdraw::{draw_canvas};
 use core::settings::{settings_read};
+//use core::atlas::{Map, MapView};
+//use core::tiles::{TileSource};
 
 // Animation frames per second
 const ANIMATION_FPS: f64 = 60.0;
@@ -58,7 +62,7 @@ const ANIMATION_SCROLL_SPEED_LIMIT: f64 = 2000.0;
 const ANIMATION_SCROLL_DECAY: f64 = 0.046;
 
 // Zoom animation duration in seconds.
-const ANIMATION_ZOOM_DURATION: f64 = 0.25;
+const ANIMATION_ZOOM_DURATION: f64 = 0.5; // TODO: 0.25;
 
 #[derive(Debug, PartialEq)]
 pub enum MapCanvasMode {
@@ -302,11 +306,11 @@ impl MapCanvas {
             
             // Default background color
             let background_color = (0.2f64, 0.2f64, 0.2f64);
-        /* TODO: get_background_color is not available on gtk-rs API yet    
-            if let Some(style_context) = widget.get_style_context() {
-                style_context.get_background_color(gtk::StateFlags::STATE_FLAG_NORMAL);
-            }
-        */    
+        // TODO: get_background_color is not available on gtk-rs API yet    
+        //  if let Some(style_context) = widget.get_style_context() {
+        //      style_context.get_background_color(gtk::StateFlags::STATE_FLAG_NORMAL);
+        //  }
+        //    
             let round_all_coordinates = { *self.mode.borrow() == MapCanvasMode::Void };
 
             // Condition round function
@@ -573,6 +577,186 @@ impl MapCanvas {
             self.on_void_state();
         }
     }
+
+/*
+    /// Signal handler for draw
+    fn draw(&self, c: &cairo::Context) {
+        let start_time = Instant::now();
+        if let Some(ref widget) = self.widget {
+            
+            // Draw all
+            if let Some(ref map_win) = self.map_win {
+                let view = map_win.map_view.borrow();
+                let atlas = map_win.atlas.borrow();
+                if let Some(ref map) = atlas.maps.get(&view.map_slug) {
+                    if let Some(tile_source) = map.to_tile_source(&atlas.tokens) {
+                        // Call a nested draw
+                        self.draw_nested(c, &widget, &map_win, &view, &map, &tile_source);
+                    } else {
+                        warn!("No tile source for map {}", map.slug);
+                    }
+                } else {
+                    warn!("No map for slug {}", &view.map_slug);
+                }
+            }
+        }
+
+        // Debug draw time    
+        if log_enabled!(Debug) { 
+            let ms = 1000.0 * duration_to_seconds(&start_time.elapsed());
+            if ms >= 15.000 {
+                debug!("draw time: {:.3} ms", ms); 
+            }
+        }
+
+        // Not an ideal place for this, but well...
+        if *self.mode.borrow() == MapCanvasMode::Void {
+            self.on_void_state();
+        }
+    }
+
+    /// Draw with lesser nesting
+    fn draw_nested(&self, c: &cairo::Context, widget: &gtk::DrawingArea, map_win: &Rc<MapWindow>, 
+                  view: &MapView, map: &Map, tile_source: &TileSource) 
+    {
+        // Default background color
+        let background_color = (0.2f64, 0.2f64, 0.2f64);
+        // TODO: get_background_color is not available on gtk-rs API yet    
+        //  if let Some(style_context) = widget.get_style_context() {
+        //      style_context.get_background_color(gtk::StateFlags::STATE_FLAG_NORMAL);
+        //  }
+        //    
+
+        // Conditional coordinate rounding function
+        let round_all_coordinates = { *self.mode.borrow() == MapCanvasMode::Void };
+        let cround = |a: f64| { if round_all_coordinates { a.round() } else { a } };
+
+        // Variables needed for drawing
+        let vw = widget.get_allocated_width() as f64;
+        let vh = widget.get_allocated_height() as f64;
+        let projection = map.as_projection();
+        let mut tcache = map_win.tile_cache.borrow_mut();
+        let tw = tile_source.tile_width;
+        let th = tile_source.tile_height;
+
+        if *self.mode.borrow() == MapCanvasMode::ZoomAnimation {
+            // Prepare tile map for zoom animation
+            let zoom_in = *self.zoom_in.borrow();
+            let mut zoom_sprite_o = self.zoom_sprite.borrow_mut();
+            if zoom_sprite_o.is_none() {
+                if zoom_in {
+                    self.prepare_sprite(&mut zoom_sprite_o, vw as i32, vh as i32, tw, th, view.zoom_level - 1);
+                } else {
+                    self.prepare_sprite(&mut zoom_sprite_o, vw as i32, vh as i32, tw, th, view.zoom_level);
+                }
+                
+                // Draw onto tile sprite (which is needed to avoid seams during scrolling)
+                if let Some(ref mut zoom_sprite) = *zoom_sprite_o {
+                    let mut cc = CoordinateContext::with_zoom_level(
+                            map_win.clone(), self, zoom_sprite.zoom_level);
+                    draw_canvas(zoom_sprite, 
+                                cc.loc_to_gpos(view.center), 
+                                cc.loc_to_gpos(view.focus.unwrap_or(view.center)), 
+                                &mut cc, &tile_source, &mut (*tcache));
+                }
+            }
+
+            // Draw the zoom sprite onto context                            
+            if let Some(ref mut zoom_sprite) = *zoom_sprite_o {
+                // Zoom factor
+                let zoom_factor = {
+                    if zoom_in {
+                        *self.zoom_factor.borrow()
+                    } else {
+                        *self.zoom_factor.borrow() * 2.0
+                    }
+                };
+                
+                // Context coordinate transformation
+                c.save();
+                let (zmpx, zmpy) = self.zoom_mouse_position.borrow().as_tuple();
+                let x_weight = zmpx / vw;
+                let y_weight = zmpy / vh;
+                if zoom_in {
+                    // zoom_factor: 1.0 -> 2.0
+                    c.translate(-x_weight * (zoom_factor - 1.0) * vw, 
+                                -y_weight * (zoom_factor - 1.0) * vh);
+                    c.scale(zoom_factor, zoom_factor);
+                } else {
+                    // zoom_factor: 2.0 -> 1.0
+                    c.translate(-x_weight * (zoom_factor - 1.0) * vw, 
+                                -y_weight * (zoom_factor - 1.0) * vh);
+                    c.scale(zoom_factor, zoom_factor);
+                }
+
+                // Draw the sprite
+                let wpos = Vector::new(vw / 2.0, vh / 2.0) - zoom_sprite.offset;
+                c.set_source_surface(&zoom_sprite.surface, cround(wpos.x), cround(wpos.y));
+                c.paint();
+                
+                // Context restore
+                c.restore();
+            }
+        } else {
+            // Draw tile map for the current zoom level
+            let mut cc = CoordinateContext::new(map_win.clone(), self);
+            let mut tile_sprite_o = self.tile_sprite.borrow_mut();
+            self.prepare_sprite(&mut tile_sprite_o, vw as i32, vh as i32, tw, th, view.zoom_level);
+            if let Some(ref mut tile_sprite) = *tile_sprite_o {
+                // Draw onto tile sprite (which is needed to avoid seams during scrolling)
+                draw_canvas(tile_sprite, 
+                            cc.loc_to_gpos(view.center), 
+                            cc.loc_to_gpos(view.focus.unwrap_or(view.center)), 
+                            &mut cc, &tile_source, &mut (*tcache));
+                    
+                // Draw the tile sprite onto context                            
+                let wpos = Vector::new(vw / 2.0, vh / 2.0) - tile_sprite.offset;
+                c.set_source_surface(&tile_sprite.surface, cround(wpos.x), cround(wpos.y));
+                c.paint();
+            }
+        }
+    
+        // Draw copyright texts
+        let margin = 2.0;
+        let mut ty = -margin;
+        for float_text in self.float_texts_se.borrow_mut().iter_mut() {
+            // Draw the text
+            float_text.pivot = Vector::new(-float_text.margin - margin, ty);
+            float_text.draw(c, Vector::new(vw as f64, vh as f64), |a| { a.round() });
+            ty -= float_text.font_size + 2.0 * float_text.margin + margin;
+        }
+    }
+
+    /// Ensure that the sprite is created and has wanted dimensions and zoom_level.
+    fn prepare_sprite(&self, sprite_o: &mut Option<Sprite>, vw: i32, vh: i32, tw: i32, th: i32, zoom_level: u8) {
+        // Width needs some extra because of:
+        // 1) view dimension flooring
+        // 2) tile alignment related to scrolling
+        // 3) tile delta within sprite
+        let tsw = (vw / tw + 3) * tw;
+        let tsh = (vh / th + 3) * th;
+        if {
+            // Reallocate the sprite if the dimensions don't match or if it doesn't 
+            // exists yet. Otherwise, ensure that zoom_level matches with the view.
+            if let Some(ref mut sprite) = *sprite_o {
+                if sprite.width != tsw || sprite.width != tsh {
+                    true
+                } else {
+                    sprite.zoom_level = zoom_level;
+                    false
+                } 
+            } else {
+                true
+            }
+        } {
+            *sprite_o = Some(Sprite::with_offset(
+                                      tsw, 
+                                      tsh,
+                                      Vector::zero(),
+                                      zoom_level, false));
+        }
+    }
+*/
 
     /// Event handler for keyboard press events.
     fn key_press_event(&self, ev: &gdk::EventKey) -> bool {
@@ -1025,30 +1209,41 @@ impl MapCanvas {
 
 /// A helper class for coordinate transformations. This class is meant to be in effect 
 /// temporarily only as it takes a snapshot of needed fields.
-struct CoordinateContext {
+pub struct CoordinateContext {
     projection: Projection,
     center: Location,
     ppdoe: f64,
     tile_width: i64,
     canvas_width: f64,
     canvas_height: f64,
+    global_nw_pos: Vector,
 }
 
 impl CoordinateContext {
     /// Construct a new context using information from map window and drawing area widget.
     pub fn new(map_win: Rc<MapWindow>, map_canvas: &MapCanvas) -> CoordinateContext {
+        let zoom_level = map_win.map_view.borrow().zoom_level;
+        CoordinateContext::with_zoom_level(map_win, map_canvas, zoom_level)
+    }
+
+    /// Construct a new context using information from map window and drawing area widget
+    /// but use a different zoom level.
+    pub fn with_zoom_level(map_win: Rc<MapWindow>, map_canvas: &MapCanvas, zoom_level: u8) -> CoordinateContext {
         let map_view = map_win.map_view.borrow();
         if let Some(ref map) = map_win.atlas.borrow().maps.get(&map_view.map_slug) {
             if let Some(tw) = map.tile_width {
                 if let Some(ref widget) = map_canvas.widget {
-                    return CoordinateContext {
+                    let mut cc = CoordinateContext {
                         projection: map.as_projection(),
                         center: map_view.center,
-                        ppdoe: ((tw as u64) << (map_view.zoom_level as u64)) as f64 / 360.0,
+                        ppdoe: ((tw as u64) << (zoom_level as u64)) as f64 / 360.0,
                         tile_width: tw as i64,
                         canvas_width: widget.get_allocated_width() as f64,
                         canvas_height: widget.get_allocated_height() as f64,
+                        global_nw_pos: Vector::zero(),
                     };
+                    cc.global_nw_pos = cc.projection.northwest_global_pixel(cc.ppdoe);            
+                    return cc;
                 }
             }
         }
@@ -1057,7 +1252,6 @@ impl CoordinateContext {
     
     /// Convert location to local pixel position.
     pub fn loc_to_wpos(&mut self, loc: Location) -> Vector {
-        let global_nw_pos = self.projection.northwest_global_pixel(self.ppdoe);            
         let center_pos = self.projection.location_to_global_pixel_pos(self.center, self.ppdoe);
         let view_nw_pos = center_pos - Vector::new(self.canvas_width / 2.0, self.canvas_height / 2.0);
         
@@ -1067,7 +1261,6 @@ impl CoordinateContext {
 
     /// Convert local pixel position to location.    
     pub fn wpos_to_loc(&mut self, local_pos: Vector) -> Location {
-        let global_nw_pos = self.projection.northwest_global_pixel(self.ppdoe);            
         let center_pos = self.projection.location_to_global_pixel_pos(self.center, self.ppdoe);
         let view_nw_pos = center_pos - Vector::new(self.canvas_width / 2.0, self.canvas_height / 2.0);
         
@@ -1083,6 +1276,11 @@ impl CoordinateContext {
     /// Convert global pixel position to location.
     pub fn gpos_to_loc(&mut self, global_pos: Vector) -> Location {
         self.projection.global_pixel_pos_to_location(global_pos, self.ppdoe)
+    }
+
+    /// Return the global most nortwest pixel position of the current zoom level.
+    pub fn global_northwest_pos(&self) -> Vector {
+        self.global_nw_pos
     }
 }
 
