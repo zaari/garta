@@ -194,7 +194,7 @@ impl TileCache {
                     return Some(self.tiles.get_mut(&tile_key).unwrap())
                 }
                 TileState::Ready => {
-                    let mut tile = self.tiles.get_mut(&tile_key).unwrap();
+                    let tile = self.tiles.get_mut(&tile_key).unwrap();
                 
                     // Check tile expiration
                     if tile.is_expired() {
@@ -1480,7 +1480,7 @@ impl TileRequestQueue {
             GLOBAL.with( move |global| {
                 let mut g = global.borrow_mut();
                 if g.is_some() {
-                    let mut gg = g.as_mut().unwrap();
+                    let gg = g.as_mut().unwrap();
                     gg.receivers.push(rx);
                 } else {
                     *g = Some(TileThreadGlobal{tile_cache: tcache_t, receivers: vec![rx]});

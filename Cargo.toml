@@ -5,28 +5,36 @@ version = "0.2.0-dev"
 authors = ["Timo Saarinen <timo.p.saarinen@gmail.com>"]
 publish = false
 
+[profile.release]
+lto = true
+
 [build-dependencies]
 serde_codegen = "0.9"
 
 [dependencies]
-image       = "0.15"
+image       = "0.17"
 hyper       = "0.10" # TODO: "0.11"
-hyper-rustls= "0.6"  # TODO: "0.10"
-chrono      = "0.2"  # TODO: "0.3"
+hyper-rustls= "0.6"  # TODO: "0.11"
+chrono      = "0.2"  # TODO: "0.4"
 log         = "0.3"
 env_logger  = "0.4"
 
 lazy_static = "0.2.8"
 regex       = "0.2"
 rand        = "0.3"
-num_cpus    = "1.6"
-xml-rs      = "0.6"
+num_cpus    = "1.7"
+xml-rs      = "0.7"
 assert      = "0.7"
 #gettext-rs  = "*"
 
 serde       = "0.9" # TODO: 1.0
 serde_derive= "0.9" # TODO: 1.0
 serde_json  = "0.9" # TODO: 1.0
+
+# TODO: http://gtk-rs.org/blog/2017/08/20/new-release.html
+#[dependencies.gtk]
+#version = "0.2.0"
+#features = ["v3_16"]
 
 glib        = "^0.1.2"
 gdk         = "^0.5.2"

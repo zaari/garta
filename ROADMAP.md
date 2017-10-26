@@ -3,6 +3,7 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 
 ## Version 0.2
 - GPX loading **[40%]**
+- ~~migrate to georust~~
 - track rendering
 - track statistics
 - layers dialog
@@ -13,7 +14,7 @@ This is an open-ended development roadmap for Garta and subject to change any ti
 - full data persistence **[40%]**
 - https support **[100%]**
 - application icon and .desktop file **[100%]**
-- configure, installer and unstaller scripts **[100%]**
+- configure, installer and uninstaller scripts **[100%]**
 - MapCanvas::draw refactored (for better modularity and maintainability) **[80% - uncommitted]**
 - firejail profile **[100%]**
 

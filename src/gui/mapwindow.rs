@@ -50,7 +50,7 @@ pub struct MapWindow {
     widgets: RefCell<MapWindowWidgets>,
 }
 
-/// As gtk-rs elements are just wrappers pointing the native widgets they survive from cloning.
+/// As gtk-rs elements are just wrappers pointing at the native widgets they survive cloning.
 #[derive(Clone)]
 struct MapWindowWidgets {
     app:                    Option<gtk::Application>,

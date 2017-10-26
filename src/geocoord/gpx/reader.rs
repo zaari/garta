@@ -44,7 +44,7 @@ pub fn read_gpx<R: Read> (source: R) -> Result<Collection, String> {
     let mut elem_characters = "".to_string();
     let mut col = Collection::new();
     
-    /// Use XML parser to get data from the source.
+    // Use XML parser to get data from the source.
     loop {
         match parser.next() {
             Ok(xml::reader::XmlEvent::StartDocument { .. }) => {
