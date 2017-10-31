@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog] and this project adheres to [Semantic 
 ### Added
 - smooth zooming, scrolling and cursor support to map canvas
 - maps, layers (hidden), coordinates and zoom level widgets to status bar
-- map canvas view persistance
+- map canvas view persistence
 - required copyright texts with clickable urls
 - tile cache with multi-threaded background tile loading
 - map metadata loading from JSON files

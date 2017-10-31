@@ -83,7 +83,7 @@ pub enum MapCanvasMode {
 }
 
 pub struct MapCanvas {
-    /// GKT drawing area widget for the canvas.
+    /// GTK drawing area widget for the canvas.
     pub widget: Option<gtk::DrawingArea>,
     
     /// Cursor mode of the canvas.
@@ -103,7 +103,7 @@ pub struct MapCanvas {
     // Temporary surface for tile grid
     tile_sprite: RefCell<Option<Sprite>>,
     
-    // Mouse location for movtion-related events.
+    // Mouse location for motion-related events.
     orig_pos: RefCell<Vector>,
     orig_center: RefCell<Location>,
     prev_motion_wpos: RefCell<Vector>,
@@ -186,7 +186,7 @@ impl MapCanvas {
         // Enable the events you wish to get notified about.
         // The 'draw' event is already enabled by the DrawingArea.
         canvas.add_events( 
-            // TODO: symbolic values instead of numberic ones (gdk/gdktypes.h) when
+            // TODO: symbolic values instead of numeric ones (gdk/gdktypes.h) when
             // gtk-rs gets fixed; http://gtk-rs.org/docs/gdk/struct.EventMask.html
                         (1 << 8) // gdk::EventMask::BUTTON_PRESS_MASK
                       | (1 << 9) // gdk::EventMask::BUTTON_RELEASE_MASK
@@ -1064,7 +1064,7 @@ impl MapCanvas {
         }
     }
     
-    /// Called after canvas state has been transfered to Void.
+    /// Called after canvas state has been transferred to Void.
     fn on_void_state(&self) {
         if let Some(ref map_win) = self.map_win {
             let mut cc = CoordinateContext::new(map_win.clone(), self);
@@ -1278,7 +1278,7 @@ impl CoordinateContext {
         self.projection.global_pixel_pos_to_location(global_pos, self.ppdoe)
     }
 
-    /// Return the global most nortwest pixel position of the current zoom level.
+    /// Return the global most northwest pixel position of the current zoom level.
     pub fn global_northwest_pos(&self) -> Vector {
         self.global_nw_pos
     }

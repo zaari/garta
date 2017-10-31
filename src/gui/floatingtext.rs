@@ -28,7 +28,7 @@ use geocoord::geo::{Vector, VectorBox};
 
 // ---- FloatingText -------------------------------------------------------------------------------
 
-/// Alighment of text box relative to pivot point.
+/// Alignment of text box relative to pivot point.
 #[derive(Copy, Clone)]
 pub enum TextAnchor {
     NorthWest,

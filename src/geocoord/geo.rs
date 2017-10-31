@@ -240,9 +240,9 @@ impl Add<Vector> for VectorBox {
 
 // ---- Location -----------------------------------------------------------------------------------
 
-/// A struct representing geographic location and point of time. 
+/// A struct representing geographic location and point of time.
 /// The coordinates are expected to use WGS84 reference ellipsoid.
-/// The altitude is in metres above sea leve.
+/// The altitude is in metres above sea level.
 /// The distance calculations rely on Haversine formula which is accurate-enough for modern
 /// location systems (GPS, GLONASS, Galileo) and is relatively fast.
 #[derive(Copy, Serialize, Deserialize, Clone, Debug)]
@@ -739,7 +739,7 @@ impl Projection {
         }
     }
     
-    // Returns gobal pixel position of the "top left" corner of the projection.
+    // Returns global pixel position of the "top left" corner of the projection.
     pub fn northwest_global_pixel(&mut self, ppdoe: f64) -> Vector {
         match *self {
             Projection::Mercator(ref mut p) => { p.northwest_global_pixel(ppdoe) }
@@ -749,7 +749,7 @@ impl Projection {
 
 // ---- MercatorProjection -------------------------------------------------------------------------
 
-/// Mercator projection-realted position conversion math.
+/// Mercator projection-related position conversion math.
 pub struct MercatorProjection { 
     current_ppdoe: f64,
     current_northwest_global_pixel: Vector,
@@ -915,7 +915,7 @@ mod tests {
         assert::close(porkkala.average_speed(&naissaar).unwrap(), 1.63, 1.0);
         
         //
-        // Naissaar - Tallin
+        // Naissaar - Tallinn
         //
         let tallinn = Location::new(59.437222, 24.745278);
         assert!( naissaar.delta_time(&tallinn).is_none() );
@@ -1062,7 +1062,7 @@ mod tests {
         let v4 = v3 + v2;
         assert_eq!(v4, Vector::new(12.0, 9.0));
         
-        // Substract
+        // Subtract
         let v5 = v2 - v3;
         assert_eq!(v5, Vector::new(-4.0, -3.0));
         

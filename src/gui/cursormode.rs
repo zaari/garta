@@ -39,7 +39,7 @@ impl CursorKeeper {
         }
     } 
 
-    /// Change curser of the widget if the new mode is different from the current one.
+    /// Change cursor of the widget if the new mode is different from the current one.
     #[inline]
     pub fn change_for(&mut self, new_mode: CursorMode, gdk_win: Option<gdk::Window>) {
         if self.current_mode != new_mode {

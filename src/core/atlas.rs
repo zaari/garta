@@ -269,7 +269,7 @@ pub struct Map {
     #[serde(default, rename = "urls")]
     pub url_templates: Vec<String>,
 
-    /// Token to be substituded in url templates. Either a reference to tokens or a literal token.    
+    /// Token to be substituted in url templates. Either a reference to tokens or a literal token.
     #[serde(default)]
     pub token: String,
 

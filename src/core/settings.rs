@@ -84,7 +84,7 @@ pub struct Settings {
     /// HTTP read timeout when fetching tiles from network sources.
     pub tile_read_timeout: u64,
     
-    /// HTTP write timeout when sendinf requests.
+    /// HTTP write timeout when sending requests.
     pub tile_write_timeout: u64,
 
     /// Automatic proxy settings.

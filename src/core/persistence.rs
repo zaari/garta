@@ -56,7 +56,7 @@ pub fn deserialize_all<P, T, F>(dir: P, handle_element: F) -> Result<(), io::Err
                             }
                         },
                         Err(e) => {
-                            warn!("Failed to read element because filename stem converion failed");
+                            warn!("Failed to read element because filename stem conversion failed");
                         }
                     }
                 }

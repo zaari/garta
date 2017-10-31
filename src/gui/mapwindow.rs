@@ -46,7 +46,7 @@ pub struct MapWindow {
     /// Tile cache
     pub tile_cache: Rc<RefCell<TileCache>>,
     
-    /// A seprate struct for GTK widgets to reduce borrow calls
+    /// A separate struct for GTK widgets to reduce borrow calls
     widgets: RefCell<MapWindowWidgets>,
 }
 
@@ -417,7 +417,7 @@ impl MapWindow {
                     action.connect_activate( move |action, coordinates_slug_variant| {
                         if let Some(ref var) = *coordinates_slug_variant {
                             if let Some(coordinates_format) = var.get_str() {
-                                debug!("choose_cordinates action invoked {}!", coordinates_format);
+                                debug!("choose_coordinates action invoked {}!", coordinates_format);
                                 action.set_state(var);
                                 
                                 // Change coordinates format on the view

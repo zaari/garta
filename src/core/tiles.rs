@@ -1597,7 +1597,7 @@ impl TileRequestQueue {
         self.new_reqs_condvar.notify_one();
     }
 
-    /// Returns the most urgent tile to be loaded and sets it to TileState::Prosessed before that.
+    /// Returns the most urgent tile to be loaded.
     /// Blocks if there are not tiles to process.
     fn pull_request(&mut self) -> Option<TileRequest> {
         // Decrease available request count by one
